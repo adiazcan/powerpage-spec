@@ -154,7 +154,7 @@ paths:
           required: true
           schema:
             type: string
-          example: "incidentid,ticketnumber,title,description,statuscode,prioritycode,statecode,createdon,modifiedon,casetypecode"
+          example: "incidentid,ticketnumber,title,description,statuscode,prioritycode,statecode,createdon,modifiedon,casetypecode,_ownerid_value"
       responses:
         "200":
           description: Case details
@@ -204,6 +204,11 @@ components:
               type: string
             casetypecode:
               type: integer
+            _ownerid_value:
+              type: string
+              format: uuid
+              nullable: true
+              description: "Owning team or user GUID; request OData formatted-value annotation for display name"
 
     CaseCreatePayload:
       type: object

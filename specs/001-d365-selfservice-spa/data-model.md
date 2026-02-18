@@ -38,6 +38,7 @@
 | Account | `_customerid_value` via account | Lookup (account) | Optional | Associated account (derived from contact or explicit) |
 | Created On | `createdon` | DateTime | Auto | Record creation timestamp |
 | Modified On | `modifiedon` | DateTime | Auto | Last update timestamp |
+| Assigned To | `_ownerid_value` | Lookup (team/user) | No | Owning team or agent GUID; use OData formatted-value annotation for display name (when available) |
 
 **Validation Rules**:
 - `title`: Required, max 300 characters (FR-Create-01)
@@ -132,6 +133,8 @@ export interface Case {
   createdon: string;        // ISO 8601
   modifiedon: string;       // ISO 8601
   _customerid_value: string; // Contact ID
+  _ownerid_value?: string;   // Owning team/user GUID (optional — absent when record has no explicit owner)
+  "_ownerid_value@OData.Community.Display.V1.FormattedValue"?: string; // Display name for UI
 }
 
 export enum CaseStatus {
