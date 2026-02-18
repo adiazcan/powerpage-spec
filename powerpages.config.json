@@ -1,0 +1,5 @@
+{
+  "siteName": "001-d365-selfservice-spa",
+  "defaultLandingPage": "index.html",
+  "compiledPath": "dist"
+}

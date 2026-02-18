@@ -148,21 +148,21 @@ Subsequent runs of `pac pages upload-code-site --rootPath .` automatically updat
 
 | # | Check | Pass? |
 |---|-------|-------|
-| 1 | Site loads and redirects unauthenticated users to login | ☐ |
-| 2 | After login, ticket list displays with correct columns | ☐ |
-| 3 | Ticket list sorts by most recently updated (default) | ☐ |
-| 4 | Filters (status, priority, date range) work correctly | ☐ |
-| 5 | Free-text search filters by ticket subject | ☐ |
-| 6 | Clicking a ticket opens the detail view | ☐ |
-| 7 | Detail view shows timeline and attachments | ☐ |
-| 8 | Attachment download works | ☐ |
-| 9 | Back navigation preserves list state | ☐ |
-| 10 | Create ticket form validates required fields | ☐ |
-| 11 | File attachment validation (type, size, count) works | ☐ |
-| 12 | Successful creation shows confirmation with ticket number | ☐ |
-| 13 | Confirmation link navigates to newly created ticket | ☐ |
-| 14 | Direct URL to unauthorized ticket shows error, no data | ☐ |
-| 15 | All transitions complete in <1s without full page reload | ☐ |
+| 1 | Site loads and redirects unauthenticated users to login | PASS (local E2E) |
+| 2 | After login, ticket list displays with correct columns | PASS (local E2E) |
+| 3 | Ticket list sorts by most recently updated (default) | PASS (local service/component behavior) |
+| 4 | Filters (status, priority, date range) work correctly | PASS (local E2E + unit) |
+| 5 | Free-text search filters by ticket subject | PASS (local E2E + unit) |
+| 6 | Clicking a ticket opens the detail view | PASS (local E2E) |
+| 7 | Detail view shows timeline and attachments | PASS (local E2E) |
+| 8 | Attachment download works | PASS (local E2E) |
+| 9 | Back navigation preserves list state | PASS (local E2E) |
+| 10 | Create ticket form validates required fields | PASS (local E2E + component) |
+| 11 | File attachment validation (type, size, count) works | PASS (local E2E + unit) |
+| 12 | Successful creation shows confirmation with ticket number | PASS (local E2E) |
+| 13 | Confirmation link navigates to newly created ticket | PASS (local E2E) |
+| 14 | Direct URL to unauthorized ticket shows error, no data | PASS (local E2E) |
+| 15 | All transitions complete in <1s without full page reload | FAIL (not measured against deployed Power Pages site) |
 
 ## Project Configuration Files
 

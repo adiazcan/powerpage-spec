@@ -301,6 +301,19 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# Vite / React SPA build outputs
+dist/
+dist-ssr/
+coverage/
+*.local
+.env.local
+.env.*.local
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
 # Visual Studio 6 build log
 *.plg
 

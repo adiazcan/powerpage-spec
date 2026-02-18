@@ -19,13 +19,13 @@
 
 **Purpose**: Create project scaffold, install dependencies, configure tooling
 
-- [ ] T001 Initialize npm project and install all dependencies (React 18, TypeScript 5, Vite, React Router, MUI v6, Formik, Yup, Vitest, React Testing Library, Playwright) in package.json
-- [ ] T002 [P] Configure tsconfig.json with strict TypeScript (strict: true, target ESNext, module bundler, paths for src aliases)
-- [ ] T003 [P] Configure .eslintrc.cjs (TypeScript + React rules) and .prettierrc
-- [ ] T004 Configure vite.config.ts with Power Pages dev proxy (/_api, /_layout, /Account → site URL) and Vitest setup per research.md R8; configure `test.coverage.provider: 'v8'` and `test.coverage.thresholds` (`lines: 80, functions: 80, branches: 80, statements: 80`) to enforce Constitution Principle II gate; add `--coverage` flag to the `"test"` npm script in package.json
-- [ ] T005 [P] Configure playwright.config.ts for E2E tests targeting http://localhost:5173
-- [ ] T006 Create index.html SPA entry point with `<div id="root">` and public/ static assets directory
-- [ ] T007 [P] Create powerpages.config.json with siteName, defaultLandingPage index.html, and compiledPath dist per research.md R14
+- [X] T001 Initialize npm project and install all dependencies (React 18, TypeScript 5, Vite, React Router, MUI v6, Formik, Yup, Vitest, React Testing Library, Playwright) in package.json
+- [X] T002 [P] Configure tsconfig.json with strict TypeScript (strict: true, target ESNext, module bundler, paths for src aliases)
+- [X] T003 [P] Configure .eslintrc.cjs (TypeScript + React rules) and .prettierrc
+- [X] T004 Configure vite.config.ts with Power Pages dev proxy (/_api, /_layout, /Account → site URL) and Vitest setup per research.md R8; configure `test.coverage.provider: 'v8'` and `test.coverage.thresholds` (`lines: 80, functions: 80, branches: 80, statements: 80`) to enforce Constitution Principle II gate; add `--coverage` flag to the `"test"` npm script in package.json
+- [X] T005 [P] Configure playwright.config.ts for E2E tests targeting http://localhost:5173
+- [X] T006 Create index.html SPA entry point with `<div id="root">` and public/ static assets directory
+- [X] T007 [P] Create powerpages.config.json with siteName, defaultLandingPage index.html, and compiledPath dist per research.md R14
 
 ---
 
@@ -39,23 +39,23 @@
 
 > **Write these tests FIRST. Verify they FAIL before any implementation tasks below. (Constitution Principle II)**
 
-- [ ] T008 [P] Write unit tests for api-client.ts (CSRF header injection on POST/PATCH/DELETE, 401/403 error propagation, JSON error parsing) in tests/unit/services/api-client.test.ts
-- [ ] T009 [P] Write unit tests for useAuth.ts hook (returns PortalUser from window["Microsoft"].Dynamic365.Portal.User, returns null when unauthenticated) in tests/unit/hooks/useAuth.test.ts
-- [ ] T010 [P] Write unit tests for useAntiForgeryToken.ts hook (fetches token from /_layout/tokenhtml, caches result, returns token string) in tests/unit/hooks/useAntiForgeryToken.test.ts
-- [ ] T011 [P] Write component test for AuthGuard.tsx (redirects to /Account/Login when unauthenticated, renders children when PortalUser is present) in tests/component/AuthGuard.test.tsx
+- [X] T008 [P] Write unit tests for api-client.ts (CSRF header injection on POST/PATCH/DELETE, 401/403 error propagation, JSON error parsing) in tests/unit/services/api-client.test.ts
+- [X] T009 [P] Write unit tests for useAuth.ts hook (returns PortalUser from window["Microsoft"].Dynamic365.Portal.User, returns null when unauthenticated) in tests/unit/hooks/useAuth.test.ts
+- [X] T010 [P] Write unit tests for useAntiForgeryToken.ts hook (fetches token from /_layout/tokenhtml, caches result, returns token string) in tests/unit/hooks/useAntiForgeryToken.test.ts
+- [X] T011 [P] Write component test for AuthGuard.tsx (redirects to /Account/Login when unauthenticated, renders children when PortalUser is present) in tests/component/AuthGuard.test.tsx
 
 ### Implementation for Foundational Infrastructure
 
-- [ ] T012 Define all TypeScript interfaces and enums per data-model.md (Case, CaseStatus, CaseState, CasePriority, CaseCreatePayload, Activity, Annotation, AnnotationCreatePayload, PortalUser, PaginatedResponse, TicketListFilters, CaseTypeOption) in src/types/index.ts
-- [ ] T013 [P] Create MUI theme configuration with design tokens (primary/secondary palette, typography scale, spacing) in src/theme/index.ts
-- [ ] T014 Implement base fetch wrapper: inject __RequestVerificationToken header on write operations, parse OData error responses, propagate 401/403 as typed errors, support $select/$filter/$orderby/$top/$skip/$count in src/services/api-client.ts
-- [ ] T015 [P] Implement portal auth state hook reading window["Microsoft"].Dynamic365.Portal.User and returning typed PortalUser or null in src/hooks/useAuth.ts
-- [ ] T016 [P] Implement anti-forgery token hook: fetch from /_layout/tokenhtml, parse value attribute from HTML response, cache in module-level variable in src/hooks/useAntiForgeryToken.ts
-- [ ] T017 Implement route protection component: read useAuth, if unauthenticated redirect to /Account/Login/ExternalLogin with return URL, otherwise render children in src/components/AuthGuard.tsx
-- [ ] T018 [P] Implement login/logout button using Power Pages auth paths (/Account/Login/ExternalLogin for login, /Account/Login/LogOff?returnUrl=/ for logout) in src/components/AuthButton.tsx
-- [ ] T019 Implement app shell with MUI AppBar header (site title + AuthButton), main content outlet, and footer in src/components/Layout.tsx
-- [ ] T020 Implement root App component with React Router routes: / → TicketList, /tickets/:id → TicketDetail, /tickets/new → CreateTicket, /tickets/:id/confirm → Confirmation; wrap all routes in AuthGuard and Layout in src/App.tsx
-- [ ] T021 Create application entry point mounting App with MUI ThemeProvider and React.StrictMode in src/main.tsx and minimal CSS reset in src/index.css
+- [X] T012 Define all TypeScript interfaces and enums per data-model.md (Case, CaseStatus, CaseState, CasePriority, CaseCreatePayload, Activity, Annotation, AnnotationCreatePayload, PortalUser, PaginatedResponse, TicketListFilters, CaseTypeOption) in src/types/index.ts
+- [X] T013 [P] Create MUI theme configuration with design tokens (primary/secondary palette, typography scale, spacing) in src/theme/index.ts
+- [X] T014 Implement base fetch wrapper: inject __RequestVerificationToken header on write operations, parse OData error responses, propagate 401/403 as typed errors, support $select/$filter/$orderby/$top/$skip/$count in src/services/api-client.ts
+- [X] T015 [P] Implement portal auth state hook reading window["Microsoft"].Dynamic365.Portal.User and returning typed PortalUser or null in src/hooks/useAuth.ts
+- [X] T016 [P] Implement anti-forgery token hook: fetch from /_layout/tokenhtml, parse value attribute from HTML response, cache in module-level variable in src/hooks/useAntiForgeryToken.ts
+- [X] T017 Implement route protection component: read useAuth, if unauthenticated redirect to /Account/Login/ExternalLogin with return URL, otherwise render children in src/components/AuthGuard.tsx
+- [X] T018 [P] Implement login/logout button using Power Pages auth paths (/Account/Login/ExternalLogin for login, /Account/Login/LogOff?returnUrl=/ for logout) in src/components/AuthButton.tsx
+- [X] T019 Implement app shell with MUI AppBar header (site title + AuthButton), main content outlet, and footer in src/components/Layout.tsx
+- [X] T020 Implement root App component with React Router routes: / → TicketList, /tickets/:id → TicketDetail, /tickets/new → CreateTicket, /tickets/:id/confirm → Confirmation; wrap all routes in AuthGuard and Layout in src/App.tsx
+- [X] T021 Create application entry point mounting App with MUI ThemeProvider and React.StrictMode in src/main.tsx and minimal CSS reset in src/index.css
 
 **Checkpoint**: Foundation complete — all user story phases can now begin in parallel
 
@@ -71,20 +71,20 @@
 
 > **Write these tests FIRST. Verify they FAIL before any implementation tasks below. (Constitution Principle II)**
 
-- [ ] T022 [P] [US1] Write unit tests for listIncidents: OData query param composition ($select, $filter, $orderby, $top, $skip, $count), handling of PaginatedResponse shape, and error propagation in tests/unit/services/incidents.test.ts
-- [ ] T023 [P] [US1] Write unit tests for useTickets.ts hook: initial default state, filter updates, page transitions, search text debounce, and reset behavior in tests/unit/hooks/useTickets.test.ts
-- [ ] T024 [P] [US1] Write component test for TicketList.tsx: renders ticket rows with formatted columns, shows LoadingSpinner during fetch, shows EmptyState with no results, shows ErrorBanner on API error, filter controls trigger state updates in tests/component/TicketList.test.tsx
-- [ ] T025 [P] [US1] Write E2E tests covering US1 acceptance scenarios: authenticated list view, empty state, status filter, search, pagination, and unauthorized access rejection in tests/e2e/ticket-list.spec.ts
+- [X] T022 [P] [US1] Write unit tests for listIncidents: OData query param composition ($select, $filter, $orderby, $top, $skip, $count), handling of PaginatedResponse shape, and error propagation in tests/unit/services/incidents.test.ts
+- [X] T023 [P] [US1] Write unit tests for useTickets.ts hook: initial default state, filter updates, page transitions, search text debounce, and reset behavior in tests/unit/hooks/useTickets.test.ts
+- [X] T024 [P] [US1] Write component test for TicketList.tsx: renders ticket rows with formatted columns, shows LoadingSpinner during fetch, shows EmptyState with no results, shows ErrorBanner on API error, filter controls trigger state updates in tests/component/TicketList.test.tsx
+- [X] T025 [P] [US1] Write E2E tests covering US1 acceptance scenarios: authenticated list view, empty state, status filter, search, pagination, and unauthorized access rejection in tests/e2e/ticket-list.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T026 [P] [US1] Implement date (ISO 8601 → locale string), CaseStatus label, CasePriority label, and CaseState label formatters in src/utils/formatters.ts
-- [ ] T027 [P] [US1] Create reusable MUI CircularProgress loading spinner component in src/components/LoadingSpinner.tsx
-- [ ] T028 [P] [US1] Create reusable empty state component with configurable icon, headline, and optional CTA button in src/components/EmptyState.tsx
-- [ ] T029 [P] [US1] Create reusable error banner component rendering MUI Alert with message and optional retry action in src/components/ErrorBanner.tsx
-- [ ] T030 [US1] Implement listIncidents function: build OData query from TicketListFilters ($select required fields, $filter for status/priority/dateFrom/dateTo/searchText contains, $orderby modifiedon desc, $top/$skip from page/pageSize, $count=true) in src/services/incidents.ts
-- [ ] T031 [US1] Implement useTickets hook: manage TicketListFilters state, debounce search input (300 ms), call listIncidents, expose tickets/totalCount/loading/error/filters/setFilters/setPage in src/hooks/useTickets.ts
-- [ ] T032 [US1] Implement TicketList page: MUI Table with columns (ticketnumber, title, statuscode, prioritycode, createdon, modifiedon) formatted via formatters.ts, filter panel (status select, priority select, date-range pickers), free-text search input, MUI Pagination, LoadingSpinner, EmptyState (with link to /tickets/new), ErrorBanner in src/pages/TicketList.tsx
+- [X] T026 [P] [US1] Implement date (ISO 8601 → locale string), CaseStatus label, CasePriority label, and CaseState label formatters in src/utils/formatters.ts
+- [X] T027 [P] [US1] Create reusable MUI CircularProgress loading spinner component in src/components/LoadingSpinner.tsx
+- [X] T028 [P] [US1] Create reusable empty state component with configurable icon, headline, and optional CTA button in src/components/EmptyState.tsx
+- [X] T029 [P] [US1] Create reusable error banner component rendering MUI Alert with message and optional retry action in src/components/ErrorBanner.tsx
+- [X] T030 [US1] Implement listIncidents function: build OData query from TicketListFilters ($select required fields, $filter for status/priority/dateFrom/dateTo/searchText contains, $orderby modifiedon desc, $top/$skip from page/pageSize, $count=true) in src/services/incidents.ts
+- [X] T031 [US1] Implement useTickets hook: manage TicketListFilters state, debounce search input (300 ms), call listIncidents, expose tickets/totalCount/loading/error/filters/setFilters/setPage in src/hooks/useTickets.ts
+- [X] T032 [US1] Implement TicketList page: MUI Table with columns (ticketnumber, title, statuscode, prioritycode, createdon, modifiedon) formatted via formatters.ts, filter panel (status select, priority select, date-range pickers), free-text search input, MUI Pagination, LoadingSpinner, EmptyState (with link to /tickets/new), ErrorBanner in src/pages/TicketList.tsx
 
 **Checkpoint**: US1 fully functional and independently testable. Deployable as portal MVP.
 
@@ -100,18 +100,18 @@
 
 > **Write these tests FIRST. Verify they FAIL before any implementation tasks below. (Constitution Principle II)**
 
-- [ ] T033 [P] [US2] Write unit tests for listActivities: OData filter by _regardingobjectid_value, orderby createdon asc, and response mapping to Activity interface in tests/unit/services/activities.test.ts
-- [ ] T034 [P] [US2] Write unit tests for listAnnotations (filter by _objectid_value, isdocument flag) and getAnnotation (full fetch with documentbody for download) in tests/unit/services/annotations.test.ts
-- [ ] T035 [US2] Write unit tests for getIncident: fetch by incidentid with $select full detail fields (including `_ownerid_value`), 403 → authorization error, 404 → not-found error in tests/unit/services/incidents.test.ts _(extends same file as T022 — do not run concurrently with T022)_
-- [ ] T036 [P] [US2] Write component test for TicketDetail.tsx: renders all case header fields including Assigned Team/Queue when present, renders timeline entries in order, renders attachment list, download button triggers blob download, back button renders, 403 renders authorization error with no data in tests/component/TicketDetail.test.tsx
-- [ ] T037 [P] [US2] Write E2E tests covering US2 acceptance scenarios: detail view fields, attachment download, back navigation preserving list state, unauthorized URL rejection in tests/e2e/ticket-detail.spec.ts
+- [X] T033 [P] [US2] Write unit tests for listActivities: OData filter by _regardingobjectid_value, orderby createdon asc, and response mapping to Activity interface in tests/unit/services/activities.test.ts
+- [X] T034 [P] [US2] Write unit tests for listAnnotations (filter by _objectid_value, isdocument flag) and getAnnotation (full fetch with documentbody for download) in tests/unit/services/annotations.test.ts
+- [X] T035 [US2] Write unit tests for getIncident: fetch by incidentid with $select full detail fields (including `_ownerid_value`), 403 → authorization error, 404 → not-found error in tests/unit/services/incidents.test.ts _(extends same file as T022 — do not run concurrently with T022)_
+- [X] T036 [P] [US2] Write component test for TicketDetail.tsx: renders all case header fields including Assigned Team/Queue when present, renders timeline entries in order, renders attachment list, download button triggers blob download, back button renders, 403 renders authorization error with no data in tests/component/TicketDetail.test.tsx
+- [X] T037 [P] [US2] Write E2E tests covering US2 acceptance scenarios: detail view fields, attachment download, back navigation preserving list state, unauthorized URL rejection in tests/e2e/ticket-detail.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Implement listActivities function: GET /_api/activitypointers with $select (activityid, subject, description, activitytypecode, createdon), $filter _regardingobjectid_value eq incidentid, $orderby createdon asc in src/services/activities.ts
-- [ ] T039 [P] [US2] Implement listAnnotations (GET /_api/annotations $filter _objectid_value, $select summary fields without documentbody) and getAnnotation (GET /_api/annotations(id) $select with documentbody for download) in src/services/annotations.ts
-- [ ] T040 [US2] Add getIncident function to src/services/incidents.ts: GET /_api/incidents(id) $select full detail fields (incidentid, ticketnumber, title, description, statuscode, prioritycode, statecode, createdon, modifiedon, casetypecode, _ownerid_value), propagate 403 as authorization error
-- [ ] T041 [US2] Implement TicketDetail page: case header (ticket number, subject, status chip, priority, dates, Assigned Team/Queue from `_ownerid_value` formatted display name when present), description section, activity timeline (MUI Timeline component, createdon asc), annotation list (filename, mimetype, download button using base64 blob URL), back button using React Router navigate(-1) passing location state to preserve TicketList scroll and filter position, 403/404 error state with ErrorBanner in src/pages/TicketDetail.tsx
+- [X] T038 [P] [US2] Implement listActivities function: GET /_api/activitypointers with $select (activityid, subject, description, activitytypecode, createdon), $filter _regardingobjectid_value eq incidentid, $orderby createdon asc in src/services/activities.ts
+- [X] T039 [P] [US2] Implement listAnnotations (GET /_api/annotations $filter _objectid_value, $select summary fields without documentbody) and getAnnotation (GET /_api/annotations(id) $select with documentbody for download) in src/services/annotations.ts
+- [X] T040 [US2] Add getIncident function to src/services/incidents.ts: GET /_api/incidents(id) $select full detail fields (incidentid, ticketnumber, title, description, statuscode, prioritycode, statecode, createdon, modifiedon, casetypecode, _ownerid_value), propagate 403 as authorization error
+- [X] T041 [US2] Implement TicketDetail page: case header (ticket number, subject, status chip, priority, dates, Assigned Team/Queue from `_ownerid_value` formatted display name when present), description section, activity timeline (MUI Timeline component, createdon asc), annotation list (filename, mimetype, download button using base64 blob URL), back button using React Router navigate(-1) passing location state to preserve TicketList scroll and filter position, 403/404 error state with ErrorBanner in src/pages/TicketDetail.tsx
 
 **Checkpoint**: US2 fully functional and independently testable. US1 and US2 work together.
 
@@ -127,19 +127,19 @@
 
 > **Write these tests FIRST. Verify they FAIL before any implementation tasks below. (Constitution Principle II)**
 
-- [ ] T042 [P] [US3] Write unit tests for file-validation.ts: accepted MIME type whitelist, 10 MB raw size limit, 3-file maximum count, returns typed validation errors in tests/unit/utils/file-validation.test.ts
-- [ ] T043 [US3] Write unit tests for createIncident: POST payload construction (CaseCreatePayload + customerid_contact@odata.bind), CSRF header presence, incidentid extraction from OData-EntityId response header in tests/unit/services/incidents.test.ts _(extends same file as T022 and T035 — must not run concurrently with either)_
-- [ ] T044 [US3] Write unit tests for createAnnotation: POST payload construction with base64 documentbody and objectid_incident@odata.bind, CSRF header presence, 400 error propagation in tests/unit/services/annotations.test.ts _(extends same file as T034 — must not run concurrently with T034)_
-- [ ] T045 [P] [US3] Write component test for CreateTicket.tsx: Yup validation triggers for required fields and char limits, file size/type/count errors, successful submission calls createIncident + createAnnotation in sequence, 401 saves form to sessionStorage, server error shows ErrorBanner with form data preserved in tests/component/CreateTicket.test.tsx
-- [ ] T046 [P] [US3] Write E2E tests covering US3 acceptance scenarios: successful creation with confirmation, required field validation, file constraint errors, confirmation link navigation, network error form preservation in tests/e2e/create-ticket.spec.ts
+- [X] T042 [P] [US3] Write unit tests for file-validation.ts: accepted MIME type whitelist, 10 MB raw size limit, 3-file maximum count, returns typed validation errors in tests/unit/utils/file-validation.test.ts
+- [X] T043 [US3] Write unit tests for createIncident: POST payload construction (CaseCreatePayload + customerid_contact@odata.bind), CSRF header presence, incidentid extraction from OData-EntityId response header in tests/unit/services/incidents.test.ts _(extends same file as T022 and T035 — must not run concurrently with either)_
+- [X] T044 [US3] Write unit tests for createAnnotation: POST payload construction with base64 documentbody and objectid_incident@odata.bind, CSRF header presence, 400 error propagation in tests/unit/services/annotations.test.ts _(extends same file as T034 — must not run concurrently with T034)_
+- [X] T045 [P] [US3] Write component test for CreateTicket.tsx: Yup validation triggers for required fields and char limits, file size/type/count errors, successful submission calls createIncident + createAnnotation in sequence, 401 saves form to sessionStorage, server error shows ErrorBanner with form data preserved in tests/component/CreateTicket.test.tsx
+- [X] T046 [P] [US3] Write E2E tests covering US3 acceptance scenarios: successful creation with confirmation, required field validation, file constraint errors, confirmation link navigation, network error form preservation in tests/e2e/create-ticket.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T047 [P] [US3] Implement file validation: MIME type whitelist (application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, image/png, image/jpeg, text/plain), max 10 MB raw size per file, max 3 files total, return typed error messages per FR-Create-03 in src/utils/file-validation.ts
-- [ ] T048 [US3] Add createIncident function to src/services/incidents.ts: POST /_api/incidents with CaseCreatePayload (including customerid_contact@odata.bind set from useAuth contactId), pass CSRF token header, return incidentid parsed from OData-EntityId response header
-- [ ] T049 [US3] Add createAnnotation function to src/services/annotations.ts: POST /_api/annotations with AnnotationCreatePayload (base64 documentbody, objectid_incident@odata.bind), pass CSRF token header per contracts/annotations.yaml
-- [ ] T050 [US3] Implement CreateTicket page: Formik+Yup form with subject (max 300), casetypecode select (static CaseTypeOption list), description textarea (max 4000), optional prioritycode select, optional file upload (validateFiles from file-validation.ts, max 3 × 10 MB); on submit call createIncident then createAnnotation for each file; on 401 save form values to sessionStorage and redirect to login; restore from sessionStorage on mount; server errors show ErrorBanner with form data preserved (FR-Create-07); navigate to /tickets/:id/confirm on success in src/pages/CreateTicket.tsx
-- [ ] T051 [US3] Implement Confirmation page: display new ticket number (from router location state), link to /tickets/:incidentid, and button to return to ticket list in src/pages/Confirmation.tsx
+- [X] T047 [P] [US3] Implement file validation: MIME type whitelist (application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, image/png, image/jpeg, text/plain), max 10 MB raw size per file, max 3 files total, return typed error messages per FR-Create-03 in src/utils/file-validation.ts
+- [X] T048 [US3] Add createIncident function to src/services/incidents.ts: POST /_api/incidents with CaseCreatePayload (including customerid_contact@odata.bind set from useAuth contactId), pass CSRF token header, return incidentid parsed from OData-EntityId response header
+- [X] T049 [US3] Add createAnnotation function to src/services/annotations.ts: POST /_api/annotations with AnnotationCreatePayload (base64 documentbody, objectid_incident@odata.bind), pass CSRF token header per contracts/annotations.yaml
+- [X] T050 [US3] Implement CreateTicket page: Formik+Yup form with subject (max 300), casetypecode select (static CaseTypeOption list), description textarea (max 4000), optional prioritycode select, optional file upload (validateFiles from file-validation.ts, max 3 × 10 MB); on submit call createIncident then createAnnotation for each file; on 401 save form values to sessionStorage and redirect to login; restore from sessionStorage on mount; server errors show ErrorBanner with form data preserved (FR-Create-07); navigate to /tickets/:id/confirm on success in src/pages/CreateTicket.tsx
+- [X] T051 [US3] Implement Confirmation page: display new ticket number (from router location state), link to /tickets/:incidentid, and button to return to ticket list in src/pages/Confirmation.tsx
 
 **Checkpoint**: All three user stories functional. Full portal feature complete.
 
@@ -149,9 +149,9 @@
 
 **Purpose**: Final integration hardening, accessibility, and deployment validation
 
-- [ ] T052 [P] Add React Router error boundaries in src/App.tsx: 403 → authorization error page (no data), 404 → not-found page, unhandled network errors → ErrorBanner fallback
-- [ ] T053 [P] Accessibility audit across all pages: keyboard navigation focus order, MUI aria-labels on interactive elements, color contrast ratio (WCAG 2.1 AA), screen reader landmarks — document findings and apply fixes in src/pages/ and src/components/
-- [ ] T054 Run quickstart.md validation checklist (all 15 items) against the deployed Power Pages site and mark each item pass/fail in specs/001-d365-selfservice-spa/quickstart.md
+- [X] T052 [P] Add React Router error boundaries in src/App.tsx: 403 → authorization error page (no data), 404 → not-found page, unhandled network errors → ErrorBanner fallback
+- [X] T053 [P] Accessibility audit across all pages: keyboard navigation focus order, MUI aria-labels on interactive elements, color contrast ratio (WCAG 2.1 AA), screen reader landmarks — document findings and apply fixes in src/pages/ and src/components/
+- [X] T054 Run quickstart.md validation checklist (all 15 items) against the deployed Power Pages site and mark each item pass/fail in specs/001-d365-selfservice-spa/quickstart.md
 
 ---
 
