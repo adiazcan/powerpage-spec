@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,6 +21,7 @@ type MicrosoftPortalWindow = Window & {
 describe('useAuth', () => {
   afterEach(() => {
     delete (window as MicrosoftPortalWindow).Microsoft;
+    vi.unstubAllEnvs();
   });
 
   it('returns PortalUser when window["Microsoft"].Dynamic365.Portal.User is populated', () => {
@@ -82,5 +83,18 @@ describe('useAuth', () => {
 
     const { result } = renderHook(() => useAuth());
     expect(result.current).toBeNull();
+  });
+
+  it('returns mock user when VITE_MOCK_USER is true', () => {
+    vi.stubEnv('VITE_MOCK_USER', 'true');
+
+    const { result } = renderHook(() => useAuth());
+    expect(result.current).toEqual({
+      userName: 'dev@localhost',
+      firstName: 'Dev',
+      lastName: 'User',
+      contactId: '00000000-0000-0000-0000-000000000001',
+      accountId: undefined,
+    });
   });
 });
