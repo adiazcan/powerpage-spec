@@ -9,7 +9,7 @@
     Subdomain for the website URL (e.g., "test-adiazcan" → test-adiazcan.powerappsportals.com).
 
 .PARAMETER TemplateName
-    Website template. Known values: "CustomerPortal", "Default Portal Template", "Power Portals_Program Registration", "Power Portals_Book Meeting".
+    Website template. Known values: "CustomerPortal", "PowerPages_BlankTemplate_V2", "Default Portal Template", "Power Portals_Program Registration", "Power Portals_Book Meeting".
 
 .PARAMETER Language
     LCID for the base language. Default: 1033 (English). Spanish (Spain): 3082.
@@ -186,7 +186,7 @@ if ($response.StatusCode -eq 202) {
                 $siteStatus = $pollResult.status
                 Write-Host "  Operation: $opStatus | Package: $pkgStatus | Site: $siteStatus ($(Get-Date -Format 'HH:mm:ss'))"
 
-                if ($opStatus -eq "OperationComplete" -and $pkgStatus -eq "Installed") {
+                if ($pkgStatus -eq "Installed" -and ($opStatus -eq "OperationComplete" -or $siteStatus -eq "StateConfigured" -or $siteStatus -eq "OperationComplete")) {
                     $provisioned = $true
                 }
             }

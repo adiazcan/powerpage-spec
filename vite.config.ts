@@ -9,6 +9,17 @@ const PP_SITE_URL =
 
 export default defineConfig({
   plugins: [react()],
+  base: '/',
+  build: {
+    rollupOptions: {
+      output: {
+        // Power Pages code-site serves web files at root, not under /assets/
+        entryFileNames: '[name]-[hash].js',
+        chunkFileNames: '[name]-[hash].js',
+        assetFileNames: '[name]-[hash][extname]',
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

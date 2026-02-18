@@ -91,6 +91,7 @@ export interface PortalUser {
 
 export interface PaginatedResponse<T> {
   '@odata.count'?: number;
+  '@odata.nextLink'?: string;
   value: T[];
 }
 

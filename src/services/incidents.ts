@@ -31,11 +31,22 @@ const DETAIL_SELECT = [
 /**
  * Fetches a paginated list of incidents for the authenticated contact.
  * Data scoping (contact/account visibility) is enforced server-side by Power Pages table permissions.
+ *
+ * Power Pages OData does not support $skip. For pages beyond the first, pass the
+ * `nextLink` returned by the previous page's response so the server can apply its
+ * own skip-token-based cursor.
  */
 export async function listIncidents(
-  filters: TicketListFilters
+  filters: TicketListFilters,
+  nextLink?: string
 ): Promise<PaginatedResponse<Case>> {
-  const { status, priority, dateFrom, dateTo, searchText, page, pageSize } = filters;
+  // When the API returns @odata.nextLink, use it directly for subsequent pages.
+  if (nextLink) {
+    const result = await apiFetch<PaginatedResponse<Case>>(nextLink, {});
+    return result.data;
+  }
+
+  const { status, priority, dateFrom, dateTo, searchText, pageSize } = filters;
 
   const filterParts: string[] = [];
   if (status !== undefined) filterParts.push(`statecode eq ${status}`);
@@ -48,7 +59,6 @@ export async function listIncidents(
     $select: LIST_SELECT,
     $orderby: 'modifiedon desc',
     $top: pageSize,
-    $skip: (page - 1) * pageSize,
     $count: true,
     $filter: filterParts.length > 0 ? filterParts.join(' and ') : undefined,
   };
