@@ -1,0 +1,9 @@
+{
+  "MetadataId": "6fc9c9f6-4898-f011-bbd3-7ced8d2d64c3",
+  "SchemaName": "mspp_entitypermission_webrole",
+  "Entity1LogicalName": "mspp_entitypermission",
+  "Entity2LogicalName": "mspp_webrole",
+  "IntersectEntityName": "mspp_entitypermission_webrole",
+  "Entity1NavigationPropertyName": "mspp_entitypermission_webrole",
+  "Entity2NavigationPropertyName": "mspp_entitypermission_webrole"
+}

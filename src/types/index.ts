@@ -74,7 +74,7 @@ export interface AnnotationCreatePayload {
   filename: string;
   mimetype: string;
   documentbody: string; // base64
-  'objectid_incident@odata.bind': string; // "/incidents(<incidentid>)"
+  'objectid@odata.bind': string; // "/incidents(<incidentid>)"
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────

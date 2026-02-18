@@ -1,0 +1,22 @@
+{
+  "@odata.context": "https://iabp.crm4.dynamics.com/api/data/v9.2/$metadata#mspp_entitypermissions(mspp_entityname,mspp_entitypermission_webrole(mspp_webroleid,mspp_name))/$entity",
+  "mspp_entitypermissionid": "889d48a6-ee0c-f111-8342-000d3ab39833",
+  "mspp_createdon": "2026-02-18T17:24:18Z",
+  "mspp_delete": false,
+  "mspp_modifiedon": "2026-02-18T17:24:18Z",
+  "mspp_appendto": true,
+  "_mspp_createdby_value": "1dc3c4b3-4fa4-f011-bbd3-6045bde0527e",
+  "statecode": 0,
+  "mspp_append": true,
+  "_mspp_modifiedby_value": "1dc3c4b3-4fa4-f011-bbd3-6045bde0527e",
+  "mspp_write": false,
+  "_mspp_websiteid_value": "77e6322a-ef7e-4f3c-8ba8-00e88ae60960",
+  "mspp_scope": 756150001,
+  "mspp_create": true,
+  "mspp_entitylogicalname": "incident",
+  "mspp_entityname": "SPA - Case Read/Create (Contact)",
+  "mspp_contactrelationship": "incident_customer_contacts",
+  "mspp_read": true,
+  "statuscode": 1,
+  "mspp_entitypermission_webrole": []
+}

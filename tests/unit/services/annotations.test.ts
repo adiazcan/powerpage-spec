@@ -115,7 +115,7 @@ describe('createAnnotation', () => {
     vi.clearAllMocks();
   });
 
-  it('posts payload with base64 documentbody and objectid_incident@odata.bind', async () => {
+  it('posts payload with base64 documentbody and objectid@odata.bind', async () => {
     apiFetchMock().mockResolvedValue({ data: null, headers: new Headers() });
 
     const payload = {
@@ -123,7 +123,7 @@ describe('createAnnotation', () => {
       filename: 'screenshot.png',
       mimetype: 'image/png',
       documentbody: 'iVBORw0KGgoAAAANSUhEUg...',
-      'objectid_incident@odata.bind': '/incidents(inc-123)',
+      'objectid@odata.bind': '/incidents(inc-123)',
     } as const;
 
     await createAnnotation(payload, 'csrf-token');
@@ -144,7 +144,7 @@ describe('createAnnotation', () => {
           filename: 'screenshot.png',
           mimetype: 'image/png',
           documentbody: 'iVBORw0KGgoAAAANSUhEUg...',
-          'objectid_incident@odata.bind': '/incidents(inc-123)',
+          'objectid@odata.bind': '/incidents(inc-123)',
         },
         'csrf-token'
       )

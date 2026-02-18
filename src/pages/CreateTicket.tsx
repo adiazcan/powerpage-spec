@@ -166,7 +166,7 @@ export function CreateTicket() {
                 filename: file.name,
                 mimetype: file.type,
                 documentbody,
-                'objectid_incident@odata.bind': `/incidents(${incidentId})`,
+                'objectid@odata.bind': `/incidents(${incidentId})`,
               };
               await createAnnotation(annotationPayload, csrfToken);
             }

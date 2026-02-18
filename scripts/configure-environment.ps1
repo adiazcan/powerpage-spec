@@ -28,6 +28,10 @@
 .PARAMETER DryRun
     Print what would be created/updated without making changes.
 
+.PARAMETER CleanDuplicates
+    Detect and delete duplicate site setting records (keeps the first per name).
+    Duplicates can accumulate if the script or configure-environment is run multiple times.
+
 .EXAMPLE
     .\configure-environment.ps1 -EnvironmentUrl "https://contoso.crm.dynamics.com" -WebsiteId "d44574f9-acc3-4ccc-8d8d-85cf5b7ad141" -Profile dev -SkipAuth
 
@@ -51,7 +55,9 @@ param(
 
     [switch]$SkipAuth,
 
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [switch]$CleanDuplicates
 )
 
 Set-StrictMode -Version Latest
@@ -242,6 +248,11 @@ function Get-DataModelPrefix {
                 WebsiteBindProp = 'mspp_websiteid@odata.bind'
                 WebsiteEntitySet = 'mspp_websites'
                 ParentBindProp  = 'mspp_parententitypermission@odata.bind'
+                SiteSettingTable   = 'mspp_sitesettings'
+                SiteSettingId      = 'mspp_sitesettingid'
+                SiteSettingName    = 'mspp_name'
+                SiteSettingValue   = 'mspp_value'
+                SiteSettingWebsite = 'mspp_websiteid'
             }
         }
     }
@@ -273,6 +284,11 @@ function Get-DataModelPrefix {
         WebsiteBindProp = 'adx_websiteid@odata.bind'
         WebsiteEntitySet = 'adx_websites'
         ParentBindProp  = 'adx_parententitypermission@odata.bind'
+        SiteSettingTable   = 'adx_sitesettings'
+        SiteSettingId      = 'adx_sitesettingid'
+        SiteSettingName    = 'adx_name'
+        SiteSettingValue   = 'adx_value'
+        SiteSettingWebsite = 'adx_websiteid'
     }
 }
 
@@ -281,30 +297,51 @@ function Get-DataModelPrefix {
 # ---------------------------------------------------------------------------
 
 function Get-ExistingSiteSettings {
-    param([string]$WebsiteId)
+    param(
+        [string]$ApiBase,
+        [string]$Token,
+        [hashtable]$DM,
+        [string]$WebsiteId
+    )
 
     Write-Step "Querying existing site settings..."
-    $filter = "adx_websiteid eq '$WebsiteId'"
+    $table    = $DM.SiteSettingTable
+    $idCol    = $DM.SiteSettingId
+    $nameCol  = $DM.SiteSettingName
+    $valueCol = $DM.SiteSettingValue
+    $wsCol    = $DM.SiteSettingWebsite
+
+    $filter = "_${wsCol}_value eq $WebsiteId"
+    $select = "$idCol,$nameCol,$valueCol"
+    $path   = "${table}?`$filter=${filter}&`$select=${select}"
+
     try {
-        $result = Invoke-PacCommand @(
-            'data', 'get',
-            '--table', 'adx_sitesetting',
-            '--filter', $filter,
-            '--select', 'adx_sitesettingid,adx_name,adx_value'
-        )
-        $settings = @{}
-        foreach ($line in $result) {
-            $str = $line.ToString().Trim()
-            if ($str -match '^\|' -and $str -notmatch '---') {
-                $cols = $str.Split('|', [System.StringSplitOptions]::RemoveEmptyEntries) |
-                        ForEach-Object { $_.Trim() }
-                if ($cols.Count -ge 2 -and $cols[1] -ne 'adx_name') {
-                    $settings[$cols[1]] = @{
-                        Id    = $cols[0]
-                        Value = if ($cols.Count -ge 3) { $cols[2] } else { '' }
-                    }
+        $result = Invoke-DataverseGet -ApiBase $ApiBase -Token $Token -Path $path
+        # Track all records including duplicates
+        $settings  = @{}
+        $duplicates = @{}
+        foreach ($s in $result.value) {
+            $name = $s.$nameCol
+            if ($settings.ContainsKey($name)) {
+                # This is a duplicate — collect it for cleanup
+                if (-not $duplicates.ContainsKey($name)) {
+                    $duplicates[$name] = [System.Collections.Generic.List[string]]::new()
+                }
+                $duplicates[$name].Add($s.$idCol)
+            }
+            else {
+                $settings[$name] = @{
+                    Id    = $s.$idCol
+                    Value = $s.$valueCol
                 }
             }
+        }
+        if ($duplicates.Count -gt 0) {
+            Write-Host "   WARNING: Found duplicate site settings:" -ForegroundColor Yellow
+            foreach ($dup in $duplicates.GetEnumerator()) {
+                Write-Host "     '$($dup.Key)' has $($dup.Value.Count) extra record(s)" -ForegroundColor Yellow
+            }
+            $script:DuplicateSettings = $duplicates
         }
         return $settings
     }
@@ -314,8 +351,47 @@ function Get-ExistingSiteSettings {
     }
 }
 
+function Remove-DuplicateSiteSettings {
+    <#
+    .SYNOPSIS
+        Deletes duplicate site setting records, keeping only the first one per name.
+    #>
+    param(
+        [string]$ApiBase,
+        [string]$Token,
+        [hashtable]$DM
+    )
+
+    if (-not $script:DuplicateSettings -or $script:DuplicateSettings.Count -eq 0) {
+        Write-Host "   No duplicate settings to clean up." -ForegroundColor Green
+        return
+    }
+
+    $table = $DM.SiteSettingTable
+    $headers = @{
+        'Authorization'    = "Bearer $Token"
+        'OData-MaxVersion' = '4.0'
+        'OData-Version'    = '4.0'
+    }
+
+    foreach ($dup in $script:DuplicateSettings.GetEnumerator()) {
+        foreach ($id in $dup.Value) {
+            try {
+                Invoke-RestMethod -Uri "$ApiBase/${table}(${id})" -Headers $headers -Method Delete | Out-Null
+                Write-Host "   [DELETED] Duplicate '$($dup.Key)' ($id)" -ForegroundColor DarkYellow
+            }
+            catch {
+                Write-Host "   [FAILED] Could not delete duplicate '$($dup.Key)' ($id): $($_.Exception.Message)" -ForegroundColor Red
+            }
+        }
+    }
+}
+
 function Set-SiteSetting {
     param(
+        [string]$ApiBase,
+        [string]$Token,
+        [hashtable]$DM,
         [string]$Name,
         [string]$Value,
         [string]$WebsiteId,
@@ -323,6 +399,11 @@ function Set-SiteSetting {
     )
 
     Write-Setting -Name $Name -Value $Value
+
+    $table    = $DM.SiteSettingTable
+    $idCol    = $DM.SiteSettingId
+    $nameCol  = $DM.SiteSettingName
+    $valueCol = $DM.SiteSettingValue
 
     if ($DryRun) {
         $action = if ($Existing.ContainsKey($Name)) { 'UPDATE' } else { 'CREATE' }
@@ -332,20 +413,55 @@ function Set-SiteSetting {
 
     if ($Existing.ContainsKey($Name)) {
         $id = $Existing[$Name].Id
-        Invoke-PacCommand @(
-            'data', 'update',
-            '--table', 'adx_sitesetting',
-            '--id', $id,
-            '--data', "adx_value=$Value"
-        ) | Out-Null
-        Write-Host "   [UPDATED]" -ForegroundColor Green
+        $headers = @{
+            'Authorization'    = "Bearer $Token"
+            'Content-Type'     = 'application/json'
+            'OData-MaxVersion' = '4.0'
+            'OData-Version'    = '4.0'
+        }
+        $body = @{ $valueCol = $Value } | ConvertTo-Json
+        try {
+            Invoke-RestMethod -Uri "$ApiBase/${table}(${id})" -Headers $headers -Method Patch -Body $body | Out-Null
+            Write-Host "   [UPDATED]" -ForegroundColor Green
+        }
+        catch {
+            # Enhanced data model (mspp_) PATCH may fail with 0x80040224.
+            # Workaround: delete the existing record and create a new one.
+            $errMsg = $_.Exception.Message
+            if ($errMsg -match '0x80040224|key was not present') {
+                Write-Host "   PATCH failed on enhanced model — recreating setting..." -ForegroundColor Yellow
+                try {
+                    $delHeaders = @{
+                        'Authorization'    = "Bearer $Token"
+                        'OData-MaxVersion' = '4.0'
+                        'OData-Version'    = '4.0'
+                    }
+                    Invoke-RestMethod -Uri "$ApiBase/${table}(${id})" -Headers $delHeaders -Method Delete | Out-Null
+                    $newBody = @{
+                        $nameCol  = $Name
+                        $valueCol = $Value
+                        "$($DM.SiteSettingWebsite)@odata.bind" = "/$($DM.WebsiteEntitySet)($WebsiteId)"
+                    }
+                    Invoke-DataversePost -ApiBase $ApiBase -Token $Token -Path $table -Body $newBody | Out-Null
+                    Write-Host "   [RECREATED]" -ForegroundColor Green
+                }
+                catch {
+                    Write-Host "   [FAILED] Could not update setting. Update manually via Design Studio or D365 UI." -ForegroundColor Red
+                    Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+            else {
+                Write-Host "   [FAILED] $errMsg" -ForegroundColor Red
+            }
+        }
     }
     else {
-        Invoke-PacCommand @(
-            'data', 'create',
-            '--table', 'adx_sitesetting',
-            '--data', "adx_name=$Name,adx_value=$Value,adx_websiteid=$WebsiteId"
-        ) | Out-Null
+        $body = @{
+            $nameCol  = $Name
+            $valueCol = $Value
+            "$($DM.SiteSettingWebsite)@odata.bind" = "/$($DM.WebsiteEntitySet)($WebsiteId)"
+        }
+        Invoke-DataversePost -ApiBase $ApiBase -Token $Token -Path $table -Body $body | Out-Null
         Write-Host "   [CREATED]" -ForegroundColor Green
     }
 }
@@ -483,7 +599,21 @@ function Add-WebRoleToPermission {
             -EntitySet $DM.PermTable -EntityId $PermissionId `
             -NavigationProperty $DM.PermWebRoleNav `
             -TargetEntitySet $DM.WebRoleTable -TargetId $WebRoleId
-        Write-Host "   [ASSOCIATED with Authenticated Users]" -ForegroundColor Green
+
+        # Verify the association actually persisted (enhanced model may silently fail)
+        $verifyPath = "$($DM.PermTable)($PermissionId)/$($DM.PermWebRoleNav)?`$select=$($DM.WebRoleId)"
+        $verifyResult = Invoke-DataverseGet -ApiBase $ApiBase -Token $Token -Path $verifyPath
+        $linked = $verifyResult.value | Where-Object { $_.$($DM.WebRoleId) -eq $WebRoleId }
+        if ($linked) {
+            Write-Host "   [ASSOCIATED with Authenticated Users]" -ForegroundColor Green
+        }
+        else {
+            Write-Host "   [WARNING] Association API returned success but did not persist." -ForegroundColor Yellow
+            Write-Host "   This is a known issue with the enhanced data model (mspp_)." -ForegroundColor Yellow
+            Write-Host "   Manually add the web role via Power Pages Design Studio:" -ForegroundColor Yellow
+            Write-Host "     Security > Table permissions > Select the permission > Add roles > Authenticated Users" -ForegroundColor White
+            $script:ManualWebRoleNeeded = $true
+        }
     }
     catch {
         $err = $_.Exception.Message
@@ -492,6 +622,9 @@ function Add-WebRoleToPermission {
         }
         else {
             Write-Host "   [ASSOCIATION FAILED] $err" -ForegroundColor Red
+            Write-Host "   Manually add the web role via Power Pages Design Studio:" -ForegroundColor Yellow
+            Write-Host "     Security > Table permissions > Select the permission > Add roles > Authenticated Users" -ForegroundColor White
+            $script:ManualWebRoleNeeded = $true
         }
     }
 }
@@ -501,17 +634,17 @@ function Add-WebRoleToPermission {
 # ---------------------------------------------------------------------------
 
 $webApiSettings = @(
-    # Incident (Case)
+    # Incident (Case) — incidentid needed by list/detail views, ownerid for detail lookup
     @{ Name = 'Webapi/incident/enabled';  Value = 'true' }
-    @{ Name = 'Webapi/incident/fields';   Value = 'ticketnumber,title,description,statuscode,prioritycode,createdon,modifiedon,statecode,casetypecode,customerid' }
+    @{ Name = 'Webapi/incident/fields';   Value = 'incidentid,ticketnumber,title,description,statuscode,prioritycode,createdon,modifiedon,statecode,casetypecode,customerid,ownerid' }
 
-    # Annotation (Attachments)
+    # Annotation (Attachments) — annotationid needed by list/detail views
     @{ Name = 'Webapi/annotation/enabled'; Value = 'true' }
-    @{ Name = 'Webapi/annotation/fields';  Value = 'filename,mimetype,documentbody,notetext,subject,objectid,isdocument,createdon' }
+    @{ Name = 'Webapi/annotation/fields';  Value = 'annotationid,filename,mimetype,documentbody,notetext,subject,objectid,isdocument,createdon' }
 
-    # Activity (Timeline)
+    # Activity (Timeline) — activityid needed by list view
     @{ Name = 'Webapi/activitypointer/enabled'; Value = 'true' }
-    @{ Name = 'Webapi/activitypointer/fields';  Value = 'subject,description,activitytypecode,createdon,regardingobjectid' }
+    @{ Name = 'Webapi/activitypointer/fields';  Value = 'activityid,subject,description,activitytypecode,createdon,regardingobjectid' }
 )
 
 $bearerAuthSettings = @(
@@ -581,29 +714,72 @@ if (-not $SkipAuth) {
     }
 }
 
-# --- Fetch existing settings for upsert logic ---
-$existing = @{}
+# ---------------------------------------------------------------------------
+# Detect data model and acquire token early (needed for site settings + perms)
+# ---------------------------------------------------------------------------
+
+$apiBase = Get-DataverseApiBase -EnvironmentUrl $EnvironmentUrl
+$token = $null
+$DM = $null
+
 if (-not $DryRun) {
-    $existing = Get-ExistingSiteSettings -WebsiteId $WebsiteId
+    $token = Get-DataverseToken -EnvironmentUrl $EnvironmentUrl
+}
+
+if ($token) {
+    Write-Step "Detecting data model..."
+    $DM = Get-DataModelPrefix -ApiBase $apiBase -Token $token
+    Write-Host "   Data model prefix: $($DM.Prefix)" -ForegroundColor Green
+}
+
+if (-not $token -or -not $DM) {
+    Write-Host ""
+    Write-Host "   Could not acquire a Dataverse access token." -ForegroundColor Yellow
+    Write-Host "   Site settings and table permissions require the Dataverse Web API." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "   To enable automatic configuration, install one of:" -ForegroundColor Yellow
+    Write-Host "     - Azure CLI:  winget install Microsoft.AzureCLI" -ForegroundColor White
+    Write-Host "       then run:   az login" -ForegroundColor White
+    Write-Host "     - Az PowerShell: Install-Module Az.Accounts" -ForegroundColor White
+    Write-Host "       then run:   Connect-AzAccount" -ForegroundColor White
+    Write-Host ""
+    Write-Host "   Exiting." -ForegroundColor Yellow
+    exit 1
+}
+
+# --- Initialize tracking variables ---
+$script:DuplicateSettings = @{}
+$script:ManualWebRoleNeeded = $false
+
+# --- Fetch existing settings for upsert logic ---
+$existing = Get-ExistingSiteSettings -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId
+
+# --- Clean up duplicates if requested ---
+if ($CleanDuplicates -and -not $DryRun) {
+    Write-Step "Cleaning up duplicate site settings..."
+    Remove-DuplicateSiteSettings -ApiBase $apiBase -Token $token -DM $DM
+}
+elseif ($script:DuplicateSettings.Count -gt 0 -and -not $CleanDuplicates) {
+    Write-Host "   Run with -CleanDuplicates to remove extra records." -ForegroundColor Yellow
 }
 
 # --- Web API Site Settings ---
 Write-Step "Configuring Web API site settings..."
 foreach ($s in $webApiSettings) {
-    Set-SiteSetting -Name $s.Name -Value $s.Value -WebsiteId $WebsiteId -Existing $existing
+    Set-SiteSetting -ApiBase $apiBase -Token $token -DM $DM -Name $s.Name -Value $s.Value -WebsiteId $WebsiteId -Existing $existing
 }
 
 # --- Bearer Auth (dev profile only) ---
 if ($Profile -eq 'dev') {
     Write-Step "Configuring bearer authentication settings (dev only)..."
     foreach ($s in $bearerAuthSettings) {
-        Set-SiteSetting -Name $s.Name -Value $s.Value -WebsiteId $WebsiteId -Existing $existing
+        Set-SiteSetting -ApiBase $apiBase -Token $token -DM $DM -Name $s.Name -Value $s.Value -WebsiteId $WebsiteId -Existing $existing
     }
 }
 elseif ($Profile -eq 'prod') {
     Write-Step "Ensuring bearer authentication is disabled (prod)..."
     $disableSetting = @{ Name = 'Authentication/BearerAuthentication/Enabled'; Value = 'false' }
-    Set-SiteSetting -Name $disableSetting.Name -Value $disableSetting.Value -WebsiteId $WebsiteId -Existing $existing
+    Set-SiteSetting -ApiBase $apiBase -Token $token -DM $DM -Name $disableSetting.Name -Value $disableSetting.Value -WebsiteId $WebsiteId -Existing $existing
 }
 
 # ---------------------------------------------------------------------------
@@ -611,12 +787,6 @@ elseif ($Profile -eq 'prod') {
 # ---------------------------------------------------------------------------
 
 Write-Step "Configuring table permissions..."
-$apiBase = Get-DataverseApiBase -EnvironmentUrl $EnvironmentUrl
-$token = $null
-
-if (-not $DryRun) {
-    $token = Get-DataverseToken -EnvironmentUrl $EnvironmentUrl
-}
 
 if ($DryRun) {
     Write-Host ""
@@ -639,25 +809,9 @@ if ($DryRun) {
 elseif (-not $token) {
     Write-Host ""
     Write-Host "   Could not acquire a Dataverse access token." -ForegroundColor Yellow
-    Write-Host "   Table permissions require the Dataverse Web API for N:N web role association." -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "   To enable automatic table permission creation, install one of:" -ForegroundColor Yellow
-    Write-Host "     - Azure CLI:  winget install Microsoft.AzureCLI" -ForegroundColor White
-    Write-Host "       then run:   az login" -ForegroundColor White
-    Write-Host "     - Az PowerShell: Install-Module Az.Accounts" -ForegroundColor White
-    Write-Host "       then run:   Connect-AzAccount" -ForegroundColor White
-    Write-Host ""
-    Write-Host "   Or configure manually in Power Pages Design Studio -> Security -> Table Permissions:" -ForegroundColor Yellow
-    foreach ($tp in $tablePermissionDefs) {
-        Write-Host "   - $($tp.DisplayName)" -ForegroundColor Gray
-    }
+    Write-Host "   Skipping table permissions." -ForegroundColor Yellow
 }
 else {
-    # --- Detect data model ---
-    Write-Host "   Detecting data model..." -ForegroundColor Gray
-    $DM = Get-DataModelPrefix -ApiBase $apiBase -Token $token
-    Write-Host "   Data model prefix: $($DM.Prefix)" -ForegroundColor Green
-
     # --- Find web role ---
     $webRoleId = Get-AuthenticatedUsersWebRole -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId
 
@@ -735,6 +889,18 @@ else {
     if ($token) {
         Write-Host "  $permCount table permissions configured." -ForegroundColor Green
     }
+}
+if ($script:ManualWebRoleNeeded) {
+    Write-Host "" -ForegroundColor White
+    Write-Host "  ACTION REQUIRED: Some web role associations could not be" -ForegroundColor Yellow
+    Write-Host "  created via the API (enhanced data model limitation)." -ForegroundColor Yellow
+    Write-Host "  Open Power Pages Design Studio > Security > Table permissions" -ForegroundColor Yellow
+    Write-Host "  and add 'Authenticated Users' role to each permission manually." -ForegroundColor Yellow
+}
+if ($script:DuplicateSettings.Count -gt 0 -and -not $CleanDuplicates) {
+    Write-Host "" -ForegroundColor White
+    Write-Host "  WARNING: Duplicate site settings detected. Re-run with" -ForegroundColor Yellow
+    Write-Host "  -CleanDuplicates to remove extra records." -ForegroundColor Yellow
 }
 Write-Host "============================================================" -ForegroundColor White
 Write-Host ""

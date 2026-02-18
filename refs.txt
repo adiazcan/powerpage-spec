@@ -1,0 +1,4 @@
+{
+  "@odata.context": "https://iabp.crm4.dynamics.com/api/data/v9.2/$metadata#Collection($ref)",
+  "value": []
+}
