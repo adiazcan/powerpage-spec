@@ -1,0 +1,229 @@
+# Power Pages Web API Contract: Incidents (Cases)
+# Base URL: /_api/incidents
+# Dataverse Table: incident | EntitySetName: incidents
+# Authentication: Power Pages session cookie (automatic)
+# CSRF: __RequestVerificationToken header required on POST/PATCH/DELETE
+
+openapi: "3.0.3"
+info:
+  title: Customer Self-Service Portal — Incidents API
+  version: "1.0.0"
+  description: >
+    Power Pages Web API contract for Case (incident) operations.
+    All requests are authenticated via Power Pages session cookie.
+    Data scoping enforced server-side by table permissions.
+
+paths:
+  /_api/incidents:
+    get:
+      operationId: listIncidents
+      summary: List cases for the authenticated user
+      description: >
+        Returns paginated cases scoped to the authenticated contact (or account
+        if account-level visibility is enabled). Scoping enforced by table permissions.
+      parameters:
+        - name: $select
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "ticketnumber,title,statuscode,prioritycode,createdon,modifiedon,statecode"
+        - name: $filter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            OData filter. Table permissions auto-filter by contact/account scope.
+            Additional filters: statecode eq 0 (active), prioritycode eq 1 (high),
+            contains(title,'search text'), createdon ge 2026-01-01T00:00:00Z
+          example: "statecode eq 0"
+        - name: $orderby
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "modifiedon desc"
+        - name: $top
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 25
+        - name: $skip
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 0
+        - name: $count
+          in: query
+          required: false
+          schema:
+            type: boolean
+          example: true
+      responses:
+        "200":
+          description: Paginated list of cases
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  "@odata.count":
+                    type: integer
+                    description: Total matching records (when $count=true)
+                  value:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CaseSummary"
+              example:
+                "@odata.count": 47
+                value:
+                  - incidentid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    ticketnumber: "CAS-00142-X7B3Q1"
+                    title: "Unable to access billing portal"
+                    statuscode: 1
+                    prioritycode: 2
+                    statecode: 0
+                    createdon: "2026-02-10T14:30:00Z"
+                    modifiedon: "2026-02-15T09:45:00Z"
+        "401":
+          description: Session expired or not authenticated
+        "403":
+          description: Insufficient permissions
+
+    post:
+      operationId: createIncident
+      summary: Create a new support case
+      description: >
+        Creates a Case linked to the authenticated contact. Requires CSRF token.
+      parameters:
+        - name: __RequestVerificationToken
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseCreatePayload"
+            example:
+              title: "Cannot reset password"
+              description: "I've tried the password reset flow 3 times but never receive the email."
+              casetypecode: 2
+              prioritycode: 2
+              "customerid_contact@odata.bind": "/contacts(f1e2d3c4-b5a6-7890-abcd-ef1234567890)"
+      responses:
+        "204":
+          description: Case created successfully
+          headers:
+            entityid:
+              description: GUID of the newly created incident
+              schema:
+                type: string
+            OData-EntityId:
+              description: Full OData URI of the created record
+              schema:
+                type: string
+        "400":
+          description: Validation error
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions (CSRF token missing or invalid)
+
+  /_api/incidents({incidentid}):
+    get:
+      operationId: getIncident
+      summary: Get case details by ID
+      description: >
+        Returns full case details. Table permissions enforce that the user
+        can only read cases they are authorized to view.
+      parameters:
+        - name: incidentid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: $select
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "incidentid,ticketnumber,title,description,statuscode,prioritycode,statecode,createdon,modifiedon,casetypecode"
+      responses:
+        "200":
+          description: Case details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseDetail"
+        "403":
+          description: Not authorized to view this case
+        "404":
+          description: Case not found
+
+components:
+  schemas:
+    CaseSummary:
+      type: object
+      properties:
+        incidentid:
+          type: string
+          format: uuid
+        ticketnumber:
+          type: string
+        title:
+          type: string
+        statuscode:
+          type: integer
+          description: "1=In Progress, 2=On Hold, 3=Waiting for Details, 4=Researching, 5=Problem Solved, 6=Cancelled"
+        statecode:
+          type: integer
+          description: "0=Active, 1=Resolved, 2=Cancelled"
+        prioritycode:
+          type: integer
+          description: "1=High, 2=Normal, 3=Low"
+        createdon:
+          type: string
+          format: date-time
+        modifiedon:
+          type: string
+          format: date-time
+
+    CaseDetail:
+      allOf:
+        - $ref: "#/components/schemas/CaseSummary"
+        - type: object
+          properties:
+            description:
+              type: string
+            casetypecode:
+              type: integer
+
+    CaseCreatePayload:
+      type: object
+      required:
+        - title
+        - description
+        - casetypecode
+        - "customerid_contact@odata.bind"
+      properties:
+        title:
+          type: string
+          maxLength: 300
+        description:
+          type: string
+          maxLength: 4000
+        casetypecode:
+          type: integer
+        prioritycode:
+          type: integer
+          enum: [1, 2, 3]
+        "customerid_contact@odata.bind":
+          type: string
+          description: "OData bind reference: /contacts(<contactid>)"

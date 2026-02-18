@@ -1,0 +1,192 @@
+# Power Pages Web API Contract: Annotations (Attachments)
+# Base URL: /_api/annotations
+# Dataverse Table: annotation | EntitySetName: annotations
+# Authentication: Power Pages session cookie (automatic)
+# CSRF: __RequestVerificationToken header required on POST
+
+openapi: "3.0.3"
+info:
+  title: Customer Self-Service Portal — Annotations API
+  version: "1.0.0"
+  description: >
+    Power Pages Web API contract for Annotation (attachment/note) operations.
+    Attachments are stored as base64-encoded document bodies.
+
+paths:
+  /_api/annotations:
+    get:
+      operationId: listAnnotations
+      summary: List attachments for a case
+      description: >
+        Returns annotations linked to a specific incident. Filter by objectid
+        to scope to a single case. Table permissions enforce parent-scope access.
+      parameters:
+        - name: $select
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "annotationid,subject,notetext,filename,mimetype,isdocument,createdon"
+        - name: $filter
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Filter by parent case
+          example: "_objectid_value eq a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        - name: $orderby
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "createdon desc"
+      responses:
+        "200":
+          description: List of annotations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AnnotationSummary"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions
+
+    post:
+      operationId: createAnnotation
+      summary: Create an attachment on a case
+      description: >
+        Creates an annotation with an optional file attachment (base64-encoded).
+        Requires CSRF token.
+      parameters:
+        - name: __RequestVerificationToken
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnotationCreatePayload"
+            example:
+              subject: "Customer attachment"
+              notetext: ""
+              filename: "screenshot.png"
+              mimetype: "image/png"
+              documentbody: "iVBORw0KGgoAAAANSUhEUg..."
+              "objectid_incident@odata.bind": "/incidents(a1b2c3d4-e5f6-7890-abcd-ef1234567890)"
+      responses:
+        "204":
+          description: Annotation created successfully
+          headers:
+            entityid:
+              description: GUID of the new annotation
+              schema:
+                type: string
+        "400":
+          description: Validation error (e.g., file too large, invalid MIME type)
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions
+
+  /_api/annotations({annotationid}):
+    get:
+      operationId: getAnnotation
+      summary: Get a single annotation with document body
+      description: >
+        Returns full annotation including base64 document body for download.
+      parameters:
+        - name: annotationid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: $select
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "annotationid,filename,mimetype,documentbody"
+      responses:
+        "200":
+          description: Annotation with document body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnotationFull"
+        "403":
+          description: Not authorized
+        "404":
+          description: Annotation not found
+
+components:
+  schemas:
+    AnnotationSummary:
+      type: object
+      properties:
+        annotationid:
+          type: string
+          format: uuid
+        subject:
+          type: string
+        notetext:
+          type: string
+        filename:
+          type: string
+        mimetype:
+          type: string
+        isdocument:
+          type: boolean
+        createdon:
+          type: string
+          format: date-time
+
+    AnnotationFull:
+      allOf:
+        - $ref: "#/components/schemas/AnnotationSummary"
+        - type: object
+          properties:
+            documentbody:
+              type: string
+              format: byte
+              description: Base64-encoded file content
+
+    AnnotationCreatePayload:
+      type: object
+      required:
+        - filename
+        - mimetype
+        - documentbody
+        - "objectid_incident@odata.bind"
+      properties:
+        subject:
+          type: string
+        notetext:
+          type: string
+        filename:
+          type: string
+          maxLength: 255
+        mimetype:
+          type: string
+          enum:
+            - application/pdf
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            - image/png
+            - image/jpeg
+            - text/plain
+        documentbody:
+          type: string
+          format: byte
+          description: Base64-encoded file content (max ~13.3 MB encoded = 10 MB raw)
+        "objectid_incident@odata.bind":
+          type: string
+          description: "OData bind reference: /incidents(<incidentid>)"

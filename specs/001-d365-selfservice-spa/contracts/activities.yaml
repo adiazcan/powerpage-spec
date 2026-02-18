@@ -1,0 +1,99 @@
+# Power Pages Web API Contract: Activities (Timeline)
+# Base URL: /_api/activitypointers
+# Dataverse Table: activitypointer | EntitySetName: activitypointers
+# Authentication: Power Pages session cookie (automatic)
+# Read-only contract — timeline entries are created by agents/system, not customers
+
+openapi: "3.0.3"
+info:
+  title: Customer Self-Service Portal — Activities API
+  version: "1.0.0"
+  description: >
+    Power Pages Web API contract for Activity (timeline) read operations.
+    Activities are displayed in the ticket detail view's timeline.
+    Internal-only notes are excluded by table permission configuration.
+
+paths:
+  /_api/activitypointers:
+    get:
+      operationId: listActivities
+      summary: List timeline entries for a case
+      description: >
+        Returns customer-visible activities linked to a specific incident.
+        Internal notes are excluded via Power Pages table permissions.
+        Results are ordered chronologically.
+      parameters:
+        - name: $select
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "activityid,subject,description,activitytypecode,createdon"
+        - name: $filter
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Filter by parent case using regarding object
+          example: "_regardingobjectid_value eq a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        - name: $orderby
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "createdon asc"
+        - name: $top
+          in: query
+          required: false
+          schema:
+            type: integer
+          example: 50
+      responses:
+        "200":
+          description: List of timeline activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Activity"
+              example:
+                value:
+                  - activityid: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                    subject: "Case opened"
+                    description: "Customer reported issue with billing portal access."
+                    activitytypecode: "email"
+                    createdon: "2026-02-10T14:30:00Z"
+                  - activityid: "c3d4e5f6-a7b8-9012-cdef-123456789012"
+                    subject: "Status changed to Researching"
+                    description: null
+                    activitytypecode: "task"
+                    createdon: "2026-02-11T10:15:00Z"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions
+
+components:
+  schemas:
+    Activity:
+      type: object
+      properties:
+        activityid:
+          type: string
+          format: uuid
+        subject:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        activitytypecode:
+          type: string
+          description: "Activity type: email, phonecall, task, appointment, annotation, etc."
+        createdon:
+          type: string
+          format: date-time
