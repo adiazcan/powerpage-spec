@@ -308,6 +308,9 @@ coverage/
 *.local
 .env.local
 .env.*.local
+.env*
+.DS_Store
+Thumbs.db
 
 # Playwright
 playwright-report/
