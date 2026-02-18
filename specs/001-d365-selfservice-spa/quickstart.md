@@ -44,11 +44,12 @@ Add the following **site settings** in Power Pages (make.powerpages.microsoft.co
 
 In Power Pages Design Studio → Security → Table Permissions:
 
-| Table | Access Type | Scope | Web Roles |
-|-------|------------|-------|-----------|
-| Case (incident) | Read, Create | Contact | Authenticated Users |
-| Annotation | Read, Create | Parent (Case) | Authenticated Users |
-| Activity | Read | Parent (Case) | Authenticated Users |
+| Table | Access Type | Scope | Web Roles | Notes |
+|-------|------------|-------|-----------|-------|
+| Contact | Read, AppendTo | Self | Authenticated Users | **Required** — allows `customerid_contact@odata.bind` on incident creation; without this, creating a ticket returns "You don't have permission to associate or disassociate table contact to incident" |
+| Case (incident) | Read, Create | Contact | Authenticated Users | |
+| Annotation | Read, Create | Parent (Case) | Authenticated Users | |
+| Activity | Read | Parent (Case) | Authenticated Users | |
 
 If account-level ticket visibility is desired, add a second table permission for Case with Account scope.
 

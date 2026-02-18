@@ -554,6 +554,9 @@ function New-EntityPermission {
         [bool]$Create = $false,
         [bool]$Write = $false,
         [bool]$Delete = $false,
+        # AppendTo allows other records (e.g. incidents) to reference this table via @odata.bind.
+        # Set to $true for contact so that customerid_contact@odata.bind succeeds on incident creation.
+        [bool]$AppendTo = $false,
         [string]$ContactRelationship = '',
         [string]$ParentRelationship = '',
         [string]$ParentPermissionId = ''
@@ -567,8 +570,8 @@ function New-EntityPermission {
         $DM.PermCreate      = $Create
         $DM.PermWrite       = $Write
         $DM.PermDelete      = $Delete
-        $DM.PermAppend      = $Create   # Append needed for create operations
-        $DM.PermAppendTo    = $Create   # AppendTo needed for parent linking
+        $DM.PermAppend      = $Create              # Append needed for create operations
+        $DM.PermAppendTo    = ($Create -or $AppendTo)  # AppendTo needed for parent linking and @odata.bind references
         $DM.WebsiteBindProp = "/$($DM.WebsiteEntitySet)($WebsiteId)"
     }
 
@@ -655,6 +658,20 @@ $bearerAuthSettings = @(
 
 # Table permission definitions with Dataverse relationship schema names
 $tablePermissionDefs = @(
+    @{
+        # Self-scope Read + AppendTo on contact is required so that
+        # customerid_contact@odata.bind in the incident POST payload succeeds.
+        # Without this permission, Power Pages rejects the association with:
+        # "You don't have permission to associate or disassociate table contact to incident"
+        DisplayName       = 'SPA - Contact Read/AppendTo (Self)'
+        Table             = 'contact'
+        Scope             = $SCOPE_SELF
+        Read              = $true
+        Create            = $false
+        AppendTo          = $true
+        ContactRelationship = ''
+        ParentRelationship  = ''
+    }
     @{
         DisplayName       = 'SPA - Case Read/Create (Contact)'
         Table             = 'incident'
@@ -800,8 +817,9 @@ if ($DryRun) {
             $SCOPE_SELF    { 'Self'    }
         }
         $privs = @()
-        if ($tp.Read)   { $privs += 'Read' }
-        if ($tp.Create) { $privs += 'Create' }
+        if ($tp.Read)                                          { $privs += 'Read' }
+        if ($tp.Create)                                        { $privs += 'Create' }
+        if ($tp.ContainsKey('AppendTo') -and $tp.AppendTo)    { $privs += 'AppendTo' }
         Write-Host "     Table: $($tp.Table) | Scope: $scopeLabel | Privileges: $($privs -join ', ')" -ForegroundColor DarkGray
         Write-Host "     [CREATE + ASSOCIATE] (dry run)" -ForegroundColor Yellow
     }
@@ -818,55 +836,79 @@ else {
     # --- Check existing permissions ---
     $existingPerms = Get-ExistingEntityPermissions -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId
 
-    # --- Create incident permission first (others depend on it) ---
+    # --- Create all permissions in definition order ---
+    # contact must be created before incident so that @odata.bind association works.
     $incidentPermId = $null
-    $incidentDef = $tablePermissionDefs | Where-Object { $_.Table -eq 'incident' }
 
-    if ($existingPerms.ContainsKey('incident')) {
-        $incidentPermId = $existingPerms['incident']
-        Write-Host "   $($incidentDef.DisplayName) — already exists ($incidentPermId)" -ForegroundColor DarkGreen
-    }
-    else {
-        Write-Host "   Creating: $($incidentDef.DisplayName)..." -ForegroundColor Gray
-        $incidentPermId = New-EntityPermission `
-            -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId `
-            -DisplayName $incidentDef.DisplayName `
-            -TableLogicalName 'incident' `
-            -Scope $incidentDef.Scope `
-            -Read $incidentDef.Read `
-            -Create $incidentDef.Create `
-            -ContactRelationship $incidentDef.ContactRelationship
-        Write-Host "   [CREATED] $incidentPermId" -ForegroundColor Green
-    }
+    foreach ($tp in $tablePermissionDefs) {
+        $appendTo = if ($tp.ContainsKey('AppendTo')) { $tp.AppendTo } else { $false }
 
-    # Associate with web role
-    Add-WebRoleToPermission -ApiBase $apiBase -Token $token -DM $DM `
-        -PermissionId $incidentPermId -WebRoleId $webRoleId
-
-    # --- Create child permissions (annotation, activitypointer) ---
-    $childDefs = $tablePermissionDefs | Where-Object { $_.Table -ne 'incident' }
-    foreach ($tp in $childDefs) {
-        if ($existingPerms.ContainsKey($tp.Table)) {
-            $permId = $existingPerms[$tp.Table]
-            Write-Host "   $($tp.DisplayName) — already exists ($permId)" -ForegroundColor DarkGreen
+        if ($tp.Table -eq 'incident') {
+            # incident is the parent for annotation and activitypointer — capture its ID
+            if ($existingPerms.ContainsKey('incident')) {
+                $incidentPermId = $existingPerms['incident']
+                Write-Host "   $($tp.DisplayName) — already exists ($incidentPermId)" -ForegroundColor DarkGreen
+            }
+            else {
+                Write-Host "   Creating: $($tp.DisplayName)..." -ForegroundColor Gray
+                $incidentPermId = New-EntityPermission `
+                    -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId `
+                    -DisplayName $tp.DisplayName `
+                    -TableLogicalName 'incident' `
+                    -Scope $tp.Scope `
+                    -Read $tp.Read `
+                    -Create $tp.Create `
+                    -AppendTo $appendTo `
+                    -ContactRelationship $tp.ContactRelationship
+                Write-Host "   [CREATED] $incidentPermId" -ForegroundColor Green
+            }
+            Add-WebRoleToPermission -ApiBase $apiBase -Token $token -DM $DM `
+                -PermissionId $incidentPermId -WebRoleId $webRoleId
+        }
+        elseif ($tp.ParentRelationship) {
+            # Child permissions (annotation, activitypointer) require incidentPermId as parent
+            if ($existingPerms.ContainsKey($tp.Table)) {
+                $permId = $existingPerms[$tp.Table]
+                Write-Host "   $($tp.DisplayName) — already exists ($permId)" -ForegroundColor DarkGreen
+            }
+            else {
+                Write-Host "   Creating: $($tp.DisplayName)..." -ForegroundColor Gray
+                $permId = New-EntityPermission `
+                    -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId `
+                    -DisplayName $tp.DisplayName `
+                    -TableLogicalName $tp.Table `
+                    -Scope $tp.Scope `
+                    -Read $tp.Read `
+                    -Create $tp.Create `
+                    -AppendTo $appendTo `
+                    -ParentRelationship $tp.ParentRelationship `
+                    -ParentPermissionId $incidentPermId
+                Write-Host "   [CREATED] $permId" -ForegroundColor Green
+            }
+            Add-WebRoleToPermission -ApiBase $apiBase -Token $token -DM $DM `
+                -PermissionId $permId -WebRoleId $webRoleId
         }
         else {
-            Write-Host "   Creating: $($tp.DisplayName)..." -ForegroundColor Gray
-            $permId = New-EntityPermission `
-                -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId `
-                -DisplayName $tp.DisplayName `
-                -TableLogicalName $tp.Table `
-                -Scope $tp.Scope `
-                -Read $tp.Read `
-                -Create $tp.Create `
-                -ParentRelationship $tp.ParentRelationship `
-                -ParentPermissionId $incidentPermId
-            Write-Host "   [CREATED] $permId" -ForegroundColor Green
+            # Standalone permissions (contact)
+            if ($existingPerms.ContainsKey($tp.Table)) {
+                $permId = $existingPerms[$tp.Table]
+                Write-Host "   $($tp.DisplayName) — already exists ($permId)" -ForegroundColor DarkGreen
+            }
+            else {
+                Write-Host "   Creating: $($tp.DisplayName)..." -ForegroundColor Gray
+                $permId = New-EntityPermission `
+                    -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId `
+                    -DisplayName $tp.DisplayName `
+                    -TableLogicalName $tp.Table `
+                    -Scope $tp.Scope `
+                    -Read $tp.Read `
+                    -Create $tp.Create `
+                    -AppendTo $appendTo
+                Write-Host "   [CREATED] $permId" -ForegroundColor Green
+            }
+            Add-WebRoleToPermission -ApiBase $apiBase -Token $token -DM $DM `
+                -PermissionId $permId -WebRoleId $webRoleId
         }
-
-        # Associate with web role
-        Add-WebRoleToPermission -ApiBase $apiBase -Token $token -DM $DM `
-            -PermissionId $permId -WebRoleId $webRoleId
     }
 }
 
