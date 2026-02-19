@@ -16,7 +16,8 @@
         "ForEach-Object": true,
         "ConvertTo-Json": true,
         "git rev-parse": true,
-        "npx playwright": true
+        "npx playwright": true,
+        "pac": true
     }
 }
 
