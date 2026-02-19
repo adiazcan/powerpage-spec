@@ -42,7 +42,6 @@ export interface CaseCreatePayload {
   description: string;
   casetypecode: number;
   prioritycode?: CasePriority;
-  'customerid_contact@odata.bind': string; // "/contacts(<contactid>)"
 }
 
 // ── Activity (Timeline Entry) ────────────────────────────────────────────────

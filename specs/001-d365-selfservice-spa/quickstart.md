@@ -46,7 +46,7 @@ In Power Pages Design Studio → Security → Table Permissions:
 
 | Table | Access Type | Scope | Web Roles | Notes |
 |-------|------------|-------|-----------|-------|
-| Contact | Read, AppendTo | Self | Authenticated Users | **Required** — allows `customerid_contact@odata.bind` on incident creation; without this, creating a ticket returns "You don't have permission to associate or disassociate table contact to incident" |
+| Contact | Read, AppendTo | Self | Authenticated Users | Optional for this SPA. Needed only if your implementation explicitly writes `customerid_contact@odata.bind` or reads contact rows via Web API. |
 | Case (incident) | Read, Create | Contact | Authenticated Users | |
 | Annotation | Read, Create | Parent (Case) | Authenticated Users | |
 | Activity | Read | Parent (Case) | Authenticated Users | |

@@ -115,7 +115,6 @@ paths:
               description: "I've tried the password reset flow 3 times but never receive the email."
               casetypecode: 2
               prioritycode: 2
-              "customerid_contact@odata.bind": "/contacts(f1e2d3c4-b5a6-7890-abcd-ef1234567890)"
       responses:
         "204":
           description: Case created successfully
@@ -216,7 +215,6 @@ components:
         - title
         - description
         - casetypecode
-        - "customerid_contact@odata.bind"
       properties:
         title:
           type: string
@@ -229,6 +227,3 @@ components:
         prioritycode:
           type: integer
           enum: [1, 2, 3]
-        "customerid_contact@odata.bind":
-          type: string
-          description: "OData bind reference: /contacts(<contactid>)"

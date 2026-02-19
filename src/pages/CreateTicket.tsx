@@ -154,7 +154,6 @@ export function CreateTicket() {
             ...(values.prioritycode
               ? { prioritycode: Number(values.prioritycode) as CasePriority }
               : {}),
-            'customerid_contact@odata.bind': `/contacts(${user.contactId})`,
           };
 
           try {

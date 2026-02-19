@@ -329,7 +329,7 @@ describe('createIncident', () => {
     vi.clearAllMocks();
   });
 
-  it('posts CaseCreatePayload including customerid_contact@odata.bind', async () => {
+  it('posts CaseCreatePayload without explicit customer bind', async () => {
     apiFetchMock().mockResolvedValue({
       data: null,
       headers: new Headers({
@@ -343,7 +343,6 @@ describe('createIncident', () => {
       description: 'Reset flow fails',
       casetypecode: 2,
       prioritycode: 2,
-      'customerid_contact@odata.bind': '/contacts(f1e2d3c4-b5a6-7890-abcd-ef1234567890)',
     } as const;
 
     await createIncident(payload, 'csrf-token');
@@ -369,7 +368,6 @@ describe('createIncident', () => {
         title: 'Cannot reset password',
         description: 'Reset flow fails',
         casetypecode: 2,
-        'customerid_contact@odata.bind': '/contacts(f1e2d3c4-b5a6-7890-abcd-ef1234567890)',
       },
       'csrf-token'
     );
@@ -389,7 +387,6 @@ describe('createIncident', () => {
           title: 'Cannot reset password',
           description: 'Reset flow fails',
           casetypecode: 2,
-          'customerid_contact@odata.bind': '/contacts(f1e2d3c4-b5a6-7890-abcd-ef1234567890)',
         },
         'csrf-token'
       )

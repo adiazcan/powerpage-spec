@@ -163,8 +163,10 @@ export interface CaseCreatePayload {
   description: string;
   casetypecode: number;
   prioritycode?: CasePriority;
-  "customerid_contact@odata.bind": string; // "/contacts(<contactid>)"
 }
+
+// Note: customer relationship is set server-side by Power Pages table permissions
+// (Contact scope using incident_customer_contacts) for the authenticated user.
 
 export interface Activity {
   activityid: string;
