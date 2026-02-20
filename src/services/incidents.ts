@@ -25,7 +25,6 @@ const DETAIL_SELECT = [
   'createdon',
   'modifiedon',
   'casetypecode',
-  '_ownerid_value',
 ].join(',');
 
 const DETAIL_SELECT_FALLBACK = [
