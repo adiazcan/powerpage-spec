@@ -216,6 +216,13 @@ export function Home() {
             </div>
 
             <div className="hp-activity-list">
+              {loading && (
+                <div className="hp-activity-loading" role="progressbar" aria-label="Loading recent activities">
+                  <div className="hp-activity-progress-track">
+                    <div className="hp-activity-progress-bar" />
+                  </div>
+                </div>
+              )}
               {!loading && !error && activityItems.length === 0 && (
                 <article className="hp-activity-item">
                   <div className="hp-activity-copy">

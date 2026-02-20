@@ -4,6 +4,7 @@
   width: 100%;
   font-family: Arimo, sans-serif;
   background: #fff;
+  --stroke-0: #0a0a0a;
 }
 
 .tl-sidebar {
@@ -291,6 +292,70 @@
 .tl-table td a {
   color: #0a0a0a;
   text-decoration: underline;
+}
+
+.tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 3px 10px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.tl-chip img {
+  width: 12px;
+  height: 12px;
+}
+
+.tl-chip-active {
+  background: #dbeafe;
+  border-color: #bedbff;
+  color: #1447e6;
+}
+
+.tl-chip-progress {
+  background: #fef3c6;
+  border-color: #fee685;
+  color: #bb4d00;
+}
+
+.tl-chip-waiting {
+  background: #f3e8ff;
+  border-color: #e9d4ff;
+  color: #8200db;
+}
+
+.tl-chip-resolved {
+  background: #d0fae5;
+  border-color: #a4f4cf;
+  color: #007a55;
+}
+
+.tl-chip-cancelled {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #6a7282;
+}
+
+.tl-chip-critical {
+  background: #ffe2e2;
+  border-color: #ffc9c9;
+  color: #c10007;
+}
+
+.tl-chip-normal {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #45556c;
+}
+
+.tl-chip-low {
+  background: #dff2fe;
+  border-color: #b8e6fe;
+  color: #0084d1;
 }
 
 .tl-empty-wrap {

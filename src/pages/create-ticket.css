@@ -4,6 +4,7 @@
   min-height: 100vh;
   background: #fff;
   font-family: Arimo, sans-serif;
+  --stroke-0: #0a0a0a;
 }
 
 .ct-sidebar {

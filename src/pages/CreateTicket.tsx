@@ -19,6 +19,12 @@ const iconTell = '/assets/create-ticket/icon-tell.svg';
 const iconContact = '/assets/create-ticket/icon-contact.svg';
 const iconAccount = '/assets/create-ticket/icon-account.svg';
 const iconNext = '/assets/create-ticket/icon-next.svg';
+const iconPortal = '/assets/create-ticket/icon-portal.svg';
+const iconDashboard = '/assets/create-ticket/icon-dashboard.svg';
+const iconTickets = '/assets/create-ticket/icon-tickets.svg';
+const iconNew = '/assets/create-ticket/icon-new.svg';
+const iconSearch = '/assets/create-ticket/icon-search.svg';
+const iconBell = '/assets/create-ticket/icon-bell.svg';
 
 const SESSION_STORAGE_KEY = 'create-ticket-form';
 
@@ -111,6 +117,15 @@ function isGenericDataverseCreateError(error: unknown): error is ApiError {
   return error instanceof ApiError && error.status === 400 && error.code === '9004010D';
 }
 
+function initialsFromName(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export function CreateTicket() {
   const navigate = useNavigate();
   const user = useAuth();
@@ -121,10 +136,68 @@ export function CreateTicket() {
   const initialValues = useMemo(() => getInitialValues(), []);
   const fullName = user ? `${user.firstName} ${user.lastName}` : 'Portal User';
   const accountLabel = user?.accountId ?? 'No account linked';
+  const initials = initialsFromName(fullName);
 
   return (
-    <div className="ct-page" data-node-id="1:873">
-      <Formik<CreateTicketFormValues>
+    <div className="ct-shell" data-node-id="1:873">
+      <aside className="ct-sidebar">
+        <div className="ct-sidebar-brand">
+          <div className="ct-sidebar-logo-wrap">
+            <img src={iconPortal} alt="Portal" />
+          </div>
+          <div>
+            <p className="ct-brand-title">Support Portal</p>
+            <p className="ct-brand-subtitle">Dynamics 365</p>
+          </div>
+        </div>
+
+        <div className="ct-divider" />
+
+        <nav className="ct-sidebar-nav" aria-label="Primary">
+          <Link className="ct-nav-link" to="/">
+            <img src={iconDashboard} alt="" />
+            <span>Dashboard</span>
+          </Link>
+          <Link className="ct-nav-link" to="/tickets">
+            <img src={iconTickets} alt="" />
+            <span>My Tickets</span>
+          </Link>
+          <Link className="ct-nav-link ct-nav-link-active" to="/tickets/new" aria-current="page">
+            <img src={iconNew} alt="" />
+            <span>New Ticket</span>
+          </Link>
+        </nav>
+
+        <div className="ct-divider" />
+
+        <div className="ct-sidebar-user">
+          <div className="ct-avatar">{initials}</div>
+          <div>
+            <p className="ct-user-name">{fullName}</p>
+            <p className="ct-user-org">{accountLabel}</p>
+          </div>
+        </div>
+      </aside>
+
+      <main className="ct-main">
+        <header className="ct-header">
+          <div className="ct-header-grow" />
+          <button className="ct-icon-btn" type="button" aria-label="Search">
+            <img src={iconSearch} alt="" />
+          </button>
+          <button className="ct-icon-btn ct-icon-btn-bell" type="button" aria-label="Notifications">
+            <img src={iconBell} alt="" />
+            <span className="ct-notification-dot" />
+          </button>
+          <div className="ct-header-divider" />
+          <div className="ct-header-user">
+            <div className="ct-avatar ct-avatar-sm">{initials}</div>
+            <span>{fullName}</span>
+          </div>
+        </header>
+
+        <div className="ct-page">
+          <Formik<CreateTicketFormValues>
         initialValues={initialValues}
         validationSchema={validationSchema}
         onSubmit={async (values, { setSubmitting }) => {
@@ -391,6 +464,8 @@ export function CreateTicket() {
           </Form>
         )}
       </Formik>
+        </div>
+      </main>
     </div>
   );
 }

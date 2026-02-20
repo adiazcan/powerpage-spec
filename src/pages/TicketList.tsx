@@ -12,17 +12,25 @@ import { ErrorBanner } from '@/components/ErrorBanner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/hooks/useAuth';
 import { useTickets } from '@/hooks/useTickets';
-import { CasePriority, CaseState } from '@/types';
+import { CasePriority, CaseState, CaseStatus } from '@/types';
 import { formatCasePriorityLabel, formatCaseStatusLabel, formatDate } from '@/utils/formatters';
 import './ticket-list.css';
 
-const iconPortal = '/assets/home/icon-home.svg';
-const iconDashboard = '/assets/home/icon-dashboard.svg';
-const iconTickets = '/assets/home/icon-tickets.svg';
-const iconNew = '/assets/home/icon-new.svg';
-const iconSearch = '/assets/home/icon-search.svg';
-const iconBell = '/assets/home/icon-bell.svg';
-const iconPlus = '/assets/home/icon-plus.svg';
+const iconPortal = '/assets/ticket-list/icon-portal.svg';
+const iconDashboard = '/assets/ticket-list/icon-dashboard.svg';
+const iconTickets = '/assets/ticket-list/icon-tickets.svg';
+const iconNew = '/assets/ticket-list/icon-new.svg';
+const iconSearch = '/assets/ticket-list/icon-search.svg';
+const iconBell = '/assets/ticket-list/icon-bell.svg';
+const iconPlus = '/assets/ticket-list/icon-plus.svg';
+const iconStatusActive = '/assets/ticket-list/icon-status-active.svg';
+const iconStatusProgress = '/assets/ticket-list/icon-status-progress.svg';
+const iconStatusWaiting = '/assets/ticket-list/icon-status-waiting.svg';
+const iconStatusResolved = '/assets/ticket-list/icon-status-resolved.svg';
+const iconStatusCancelled = '/assets/ticket-list/icon-status-cancelled.svg';
+const iconPriorityHigh = '/assets/ticket-list/icon-priority-high.svg';
+const iconPriorityNormal = '/assets/ticket-list/icon-priority-normal.svg';
+const iconPriorityLow = '/assets/ticket-list/icon-priority-low.svg';
 
 function initialsFromName(name: string): string {
   return name
@@ -38,6 +46,32 @@ function categoryLabel(casetypecode: number): string {
   if (casetypecode === 2) return 'Technical Support';
   if (casetypecode === 3) return 'General Inquiry';
   return 'Other';
+}
+
+function statusBadge(status: CaseStatus): { className: string; icon: string } {
+  if (status === CaseStatus.InProgress || status === CaseStatus.Researching) {
+    return { className: 'tl-chip tl-chip-progress', icon: iconStatusProgress };
+  }
+  if (status === CaseStatus.WaitingForDetails) {
+    return { className: 'tl-chip tl-chip-waiting', icon: iconStatusWaiting };
+  }
+  if (status === CaseStatus.ProblemSolved) {
+    return { className: 'tl-chip tl-chip-resolved', icon: iconStatusResolved };
+  }
+  if (status === CaseStatus.Cancelled) {
+    return { className: 'tl-chip tl-chip-cancelled', icon: iconStatusCancelled };
+  }
+  return { className: 'tl-chip tl-chip-active', icon: iconStatusActive };
+}
+
+function priorityBadge(priority: CasePriority): { className: string; icon: string } {
+  if (priority === CasePriority.High) {
+    return { className: 'tl-chip tl-chip-critical', icon: iconPriorityHigh };
+  }
+  if (priority === CasePriority.Low) {
+    return { className: 'tl-chip tl-chip-low', icon: iconPriorityLow };
+  }
+  return { className: 'tl-chip tl-chip-normal', icon: iconPriorityNormal };
 }
 
 export function TicketList() {
@@ -251,8 +285,28 @@ export function TicketList() {
                         </Link>
                       </td>
                       <td>{ticket.title}</td>
-                      <td>{formatCaseStatusLabel(ticket.statuscode)}</td>
-                      <td>{formatCasePriorityLabel(ticket.prioritycode)}</td>
+                      <td>
+                        {(() => {
+                          const badge = statusBadge(ticket.statuscode);
+                          return (
+                            <span className={badge.className}>
+                              <img src={badge.icon} alt="" />
+                              <span>{formatCaseStatusLabel(ticket.statuscode)}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td>
+                        {(() => {
+                          const badge = priorityBadge(ticket.prioritycode);
+                          return (
+                            <span className={badge.className}>
+                              <img src={badge.icon} alt="" />
+                              <span>{formatCasePriorityLabel(ticket.prioritycode)}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td>{categoryLabel(ticket.casetypecode)}</td>
                       <td>{formatDate(ticket.createdon)}</td>
                       <td>{formatDate(ticket.modifiedon)}</td>
