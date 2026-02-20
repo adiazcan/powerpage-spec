@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTickets } from '@/hooks/useTickets';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { CasePriority, CaseState, CaseStatus } from '@/types';
 import { formatCasePriorityLabel, formatCaseStatusLabel, formatDate } from '@/utils/formatters';
 import './home.css';
@@ -216,13 +217,7 @@ export function Home() {
             </div>
 
             <div className="hp-activity-list">
-              {loading && (
-                <div className="hp-activity-loading" role="progressbar" aria-label="Loading recent activities">
-                  <div className="hp-activity-progress-track">
-                    <div className="hp-activity-progress-bar" />
-                  </div>
-                </div>
-              )}
+              {loading && <LoadingSpinner />}
               {!loading && !error && activityItems.length === 0 && (
                 <article className="hp-activity-item">
                   <div className="hp-activity-copy">
