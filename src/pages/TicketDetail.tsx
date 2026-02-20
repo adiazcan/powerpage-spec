@@ -52,6 +52,7 @@ export function TicketDetail() {
   const [attachments, setAttachments] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [relatedDataWarning, setRelatedDataWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -64,14 +65,44 @@ export function TicketDetail() {
     setLoading(true);
     setError(null);
 
-    Promise.all([getIncident(id), listActivities(id), listAnnotations(id)])
-      .then(([incident, timeline, notes]) => {
+    setRelatedDataWarning(null);
+
+    const loadTicket = async () => {
+      try {
+        // Authorization for this page is determined by incident read access.
+        const incident = await getIncident(id);
         if (cancelled) return;
         setTicket(incident);
-        setActivities([...timeline].sort((a, b) => a.createdon.localeCompare(b.createdon)));
-        setAttachments(notes);
-      })
-      .catch((err: unknown) => {
+
+        const [timelineResult, notesResult] = await Promise.allSettled([
+          listActivities(id),
+          listAnnotations(id),
+        ]);
+
+        if (cancelled) return;
+
+        let hasRelatedDataError = false;
+
+        if (timelineResult.status === 'fulfilled') {
+          setActivities(
+            [...timelineResult.value].sort((a, b) => a.createdon.localeCompare(b.createdon))
+          );
+        } else {
+          hasRelatedDataError = true;
+          setActivities([]);
+        }
+
+        if (notesResult.status === 'fulfilled') {
+          setAttachments(notesResult.value);
+        } else {
+          hasRelatedDataError = true;
+          setAttachments([]);
+        }
+
+        if (hasRelatedDataError) {
+          setRelatedDataWarning('Some related ticket data could not be loaded.');
+        }
+      } catch (err: unknown) {
         if (cancelled) return;
 
         if (err instanceof ApiError) {
@@ -87,12 +118,14 @@ export function TicketDetail() {
 
         const message = err instanceof Error ? err.message : 'Failed to load ticket details.';
         setError(message);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setLoading(false);
         }
-      });
+      }
+    };
+
+    void loadTicket();
 
     return () => {
       cancelled = true;
@@ -193,6 +226,7 @@ export function TicketDetail() {
           </button>
 
           {error && <ErrorBanner message={error} />}
+          {!error && relatedDataWarning && <ErrorBanner message={relatedDataWarning} />}
           {loading && <LoadingSpinner />}
 
           {!loading && !error && ticket && (

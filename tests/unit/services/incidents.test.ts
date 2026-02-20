@@ -322,6 +322,49 @@ describe('getIncident', () => {
       message: 'Not Found',
     });
   });
+
+  it('retries without _ownerid_value when owner field is not enabled for Web Api', async () => {
+    apiFetchMock()
+      .mockRejectedValueOnce(
+        new ApiError(
+          400,
+          'Attribute _ownerid_value in table incident is not enabled for Web Api.',
+          '90040101'
+        )
+      )
+      .mockResolvedValueOnce({
+        data: {
+          incidentid: 'a1b2c3d4',
+          ticketnumber: 'CAS-00142',
+          title: 'Unable to access billing portal',
+          description: 'Cannot log in to billing portal',
+          statuscode: 1,
+          prioritycode: 2,
+          statecode: 0,
+          createdon: '2026-02-10T14:30:00Z',
+          modifiedon: '2026-02-15T09:45:00Z',
+          casetypecode: 1,
+          _customerid_value: 'c-abc-123',
+        },
+        headers: new Headers(),
+      });
+
+    const result = await getIncident('a1b2c3d4');
+
+    expect(result.incidentid).toBe('a1b2c3d4');
+    expect(apiFetchMock()).toHaveBeenNthCalledWith(1, '/_api/incidents(a1b2c3d4)', {
+      params: {
+        $select:
+          'incidentid,ticketnumber,title,description,statuscode,prioritycode,statecode,createdon,modifiedon,casetypecode,_ownerid_value',
+      },
+    });
+    expect(apiFetchMock()).toHaveBeenNthCalledWith(2, '/_api/incidents(a1b2c3d4)', {
+      params: {
+        $select:
+          'incidentid,ticketnumber,title,description,statuscode,prioritycode,statecode,createdon,modifiedon,casetypecode',
+      },
+    });
+  });
 });
 
 describe('createIncident', () => {

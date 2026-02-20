@@ -147,4 +147,15 @@ describe('TicketDetail', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/not authorized/i);
     expect(screen.queryByText('CAS-00123-ABC')).not.toBeInTheDocument();
   });
+
+  it('keeps ticket visible when timeline fetch fails with 403', async () => {
+    vi.mocked(activitiesModule.listActivities).mockRejectedValue(new ApiError(403, 'Forbidden'));
+
+    renderTicketDetail();
+
+    expect(await screen.findByText('CAS-00123-ABC')).toBeInTheDocument();
+    expect(screen.queryByText(/not authorized/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/related ticket data could not be loaded/i);
+    expect(screen.getByText(/no timeline entries/i)).toBeInTheDocument();
+  });
 });

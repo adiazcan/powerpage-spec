@@ -1,4 +1,4 @@
-import { apiFetch } from '@/services/api-client';
+import { ApiError, apiFetch } from '@/services/api-client';
 import type { Case, CaseCreatePayload, TicketListFilters, PaginatedResponse } from '@/types';
 
 const INCIDENTS_URL = '/_api/incidents';
@@ -26,6 +26,19 @@ const DETAIL_SELECT = [
   'modifiedon',
   'casetypecode',
   '_ownerid_value',
+].join(',');
+
+const DETAIL_SELECT_FALLBACK = [
+  'incidentid',
+  'ticketnumber',
+  'title',
+  'description',
+  'statuscode',
+  'prioritycode',
+  'statecode',
+  'createdon',
+  'modifiedon',
+  'casetypecode',
 ].join(',');
 
 /**
@@ -68,13 +81,33 @@ export async function listIncidents(
 }
 
 export async function getIncident(incidentId: string): Promise<Case> {
-  const result = await apiFetch<Case>(`${INCIDENTS_URL}(${incidentId})`, {
-    params: {
-      $select: DETAIL_SELECT,
-    },
-  });
+  try {
+    const result = await apiFetch<Case>(`${INCIDENTS_URL}(${incidentId})`, {
+      params: {
+        $select: DETAIL_SELECT,
+      },
+    });
 
-  return result.data;
+    return result.data;
+  } catch (error) {
+    const ownerFieldNotEnabled =
+      error instanceof ApiError &&
+      error.code === '90040101' &&
+      error.message.includes('_ownerid_value');
+
+    if (!ownerFieldNotEnabled) {
+      throw error;
+    }
+
+    // Some portals do not expose owner lookup fields via Web API settings.
+    // Retry with a reduced projection so the detail page can still render.
+    const fallback = await apiFetch<Case>(`${INCIDENTS_URL}(${incidentId})`, {
+      params: {
+        $select: DETAIL_SELECT_FALLBACK,
+      },
+    });
+    return fallback.data;
+  }
 }
 
 export async function createIncident(
