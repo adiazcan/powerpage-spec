@@ -1,32 +1,28 @@
 import { useEffect, useState } from 'react';
-import {
-  Box,
-  Button,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  Paper,
-  Stack,
-  Typography,
-} from '@mui/material';
-import {
-  Timeline,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineItem,
-  TimelineSeparator,
-} from '@mui/lab';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/hooks/useAuth';
 import { ApiError } from '@/services/api-client';
 import { listActivities } from '@/services/activities';
 import { getAnnotation, listAnnotations } from '@/services/annotations';
 import { getIncident } from '@/services/incidents';
 import type { Activity, Annotation, Case } from '@/types';
 import { formatCasePriorityLabel, formatCaseStatusLabel, formatDate } from '@/utils/formatters';
+import './ticket-detail.css';
+
+const iconPortal = '/assets/ticket-detail/icon-portal.svg';
+const iconDashboard = '/assets/ticket-detail/icon-dashboard.svg';
+const iconTickets = '/assets/ticket-detail/icon-tickets.svg';
+const iconNew = '/assets/ticket-detail/icon-new.svg';
+const iconSearch = '/assets/ticket-detail/icon-search.svg';
+const iconBell = '/assets/ticket-detail/icon-bell.svg';
+const iconBack = '/assets/ticket-detail/icon-back.svg';
+const iconDescription = '/assets/ticket-detail/icon-description.svg';
+const iconTimeline = '/assets/ticket-detail/icon-timeline.svg';
+const iconActive = '/assets/ticket-detail/icon-active.svg';
+const iconPriority = '/assets/ticket-detail/icon-priority.svg';
+const iconClock = '/assets/ticket-detail/icon-clock.svg';
 
 function base64ToBlob(base64: string, mimeType: string): Blob {
   const binary = atob(base64);
@@ -37,9 +33,19 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([bytes], { type: mimeType });
 }
 
+function initialsFromName(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const user = useAuth();
 
   const [ticket, setTicket] = useState<Case | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -117,121 +123,208 @@ export function TicketDetail() {
 
   const assignedOwner =
     ticket?.['_ownerid_value@OData.Community.Display.V1.FormattedValue'] ?? ticket?._ownerid_value;
+  const agentName = assignedOwner ?? 'Unassigned';
+  const shellName = user ? `${user.firstName} ${user.lastName}` : 'Sarah Chen';
+  const shellAccount = user?.accountId ?? 'Contoso Ltd';
+  const shellInitials = initialsFromName(shellName);
 
   return (
-    <Stack spacing={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-        <Typography variant="h4">Ticket Details</Typography>
-        <Button variant="outlined" onClick={() => navigate(-1)} aria-label="Back to tickets">
-          Back to tickets
-        </Button>
-      </Box>
+    <div className="td-shell" data-node-id="1:1217">
+      <aside className="td-sidebar">
+        <div className="td-sidebar-brand">
+          <div className="td-logo-wrap">
+            <img src={iconPortal} alt="Portal" />
+          </div>
+          <div>
+            <p className="td-brand-title">Support Portal</p>
+            <p className="td-brand-subtitle">Dynamics 365</p>
+          </div>
+        </div>
 
-      {error && (
-        <Box>
-          <ErrorBanner message={error} />
-        </Box>
-      )}
+        <div className="td-divider" />
 
-      {loading && <LoadingSpinner />}
+        <nav className="td-nav" aria-label="Primary">
+          <Link className="td-nav-link" to="/">
+            <img src={iconDashboard} alt="" />
+            <span>Dashboard</span>
+          </Link>
+          <Link className="td-nav-link td-nav-link-active" to="/tickets" aria-current="page">
+            <img src={iconTickets} alt="" />
+            <span>My Tickets</span>
+          </Link>
+          <Link className="td-nav-link" to="/tickets/new">
+            <img src={iconNew} alt="" />
+            <span>New Ticket</span>
+          </Link>
+        </nav>
 
-      {!loading && !error && ticket && (
-        <>
-          <Paper sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <Typography variant="h6">{ticket.ticketnumber}</Typography>
-              <Typography variant="h5">{ticket.title}</Typography>
-              <Box display="flex" gap={1} flexWrap="wrap">
-                <Chip label={formatCaseStatusLabel(ticket.statuscode)} color="primary" />
-                <Chip label={formatCasePriorityLabel(ticket.prioritycode)} variant="outlined" />
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                Opened: {formatDate(ticket.createdon)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Last updated: {formatDate(ticket.modifiedon)}
-              </Typography>
-              {assignedOwner && (
-                <Typography variant="body2" color="text.secondary">
-                  Assigned Team/Queue: {assignedOwner}
-                </Typography>
-              )}
-            </Stack>
-          </Paper>
+        <div className="td-divider" />
 
-          <Paper component="section" aria-labelledby="ticket-description-heading" sx={{ p: 3 }}>
-            <Typography id="ticket-description-heading" variant="h6" gutterBottom>
-              Description
-            </Typography>
-            <Typography variant="body1">{ticket.description || 'No description provided.'}</Typography>
-          </Paper>
+        <div className="td-sidebar-user">
+          <div className="td-avatar">{shellInitials}</div>
+          <div>
+            <p className="td-user-name">{shellName}</p>
+            <p className="td-user-org">{shellAccount}</p>
+          </div>
+        </div>
+      </aside>
 
-          <Paper component="section" aria-labelledby="activity-timeline-heading" sx={{ p: 3 }}>
-            <Typography id="activity-timeline-heading" variant="h6" gutterBottom>
-              Activity Timeline
-            </Typography>
-            {activities.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No timeline entries.
-              </Typography>
-            ) : (
-              <Timeline position="right" sx={{ p: 0, m: 0 }}>
-                {activities.map((activity, index) => (
-                  <TimelineItem key={activity.activityid}>
-                    <TimelineSeparator>
-                      <TimelineDot />
-                      {index < activities.length - 1 ? <TimelineConnector /> : null}
-                    </TimelineSeparator>
-                    <TimelineContent>
-                      <Typography data-testid="timeline-subject" fontWeight={600}>
-                        {activity.subject || activity.activitytypecode}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {formatDate(activity.createdon)}
-                      </Typography>
-                      {activity.description && <Typography variant="body2">{activity.description}</Typography>}
-                    </TimelineContent>
-                  </TimelineItem>
-                ))}
-              </Timeline>
-            )}
-          </Paper>
+      <main className="td-main">
+        <header className="td-header">
+          <div className="td-header-grow" />
+          <button className="td-icon-btn" type="button" aria-label="Search">
+            <img src={iconSearch} alt="" />
+          </button>
+          <button className="td-icon-btn td-icon-btn-bell" type="button" aria-label="Notifications">
+            <img src={iconBell} alt="" />
+            <span className="td-dot" />
+          </button>
+          <div className="td-header-divider" />
+          <div className="td-header-user">
+            <div className="td-avatar td-avatar-sm">{shellInitials}</div>
+            <span>{shellName}</span>
+          </div>
+        </header>
 
-          <Paper component="section" aria-labelledby="attachments-heading" sx={{ p: 3 }}>
-            <Typography id="attachments-heading" variant="h6" gutterBottom>
-              Attachments
-            </Typography>
-            {attachments.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No attachments.
-              </Typography>
-            ) : (
-              <List disablePadding>
-                {attachments.map((attachment) => (
-                  <ListItem
-                    key={attachment.annotationid}
-                    divider
-                    secondaryAction={
-                      <Button
-                        variant="text"
-                        onClick={() => handleDownload(attachment.annotationid)}
-                        aria-label={`Download ${attachment.filename}`}
-                      >
-                        Download
-                      </Button>
-                    }
-                  >
-                    <ListItemText
-                      primary={attachment.filename}
-                      secondary={attachment.mimetype || 'Attachment'}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            )}
-          </Paper>
-        </>
-      )}
-    </Stack>
+        <section className="td-page">
+          <button className="td-back" type="button" onClick={() => navigate(-1)} aria-label="Back to tickets">
+            <img src={iconBack} alt="" />
+            <span>Back to My Tickets</span>
+          </button>
+
+          {error && <ErrorBanner message={error} />}
+          {loading && <LoadingSpinner />}
+
+          {!loading && !error && ticket && (
+            <>
+              <div className="td-heading">
+                <div className="td-heading-meta">
+                  <span className="td-ticket-number">{ticket.ticketnumber}</span>
+                  <span className="td-chip td-chip-active">
+                    <img src={iconActive} alt="" />
+                    <span>{formatCaseStatusLabel(ticket.statuscode)}</span>
+                  </span>
+                  <span className="td-chip td-chip-priority">
+                    <img src={iconPriority} alt="" />
+                    <span>{formatCasePriorityLabel(ticket.prioritycode)}</span>
+                  </span>
+                </div>
+                <h1>{ticket.title}</h1>
+                <p className="td-updated">
+                  <img src={iconClock} alt="" />
+                  <span>Updated {formatDate(ticket.modifiedon)}</span>
+                </p>
+              </div>
+
+              <div className="td-grid">
+                <div className="td-left-column">
+                  <section className="td-card" aria-labelledby="ticket-description-heading">
+                    <h2 id="ticket-description-heading" className="td-card-title">
+                      <img src={iconDescription} alt="" />
+                      <span>Description</span>
+                    </h2>
+                    <p className="td-muted">{ticket.description || 'No description provided.'}</p>
+                  </section>
+
+                  <section className="td-card" aria-labelledby="activity-timeline-heading">
+                    <h2 id="activity-timeline-heading" className="td-card-title">
+                      <img src={iconTimeline} alt="" />
+                      <span>Activity Timeline</span>
+                    </h2>
+                    <div className="td-timeline">
+                      {activities.length === 0 ? (
+                        <p className="td-muted">No timeline entries.</p>
+                      ) : (
+                        activities.map((activity, index) => (
+                          <article key={activity.activityid} className="td-event">
+                            <div className="td-event-dot" />
+                            <div>
+                              <div className="td-event-head">
+                                <strong data-testid="timeline-subject">
+                                  {activity.subject || activity.activitytypecode}
+                                </strong>
+                                <span>{formatDate(activity.createdon)}</span>
+                              </div>
+                              {activity.description && <p>{activity.description}</p>}
+                            </div>
+                            {index < activities.length - 1 && <div className="td-event-line" />}
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </section>
+                </div>
+
+                <div className="td-right-column">
+                  <section className="td-card">
+                    <h2 className="td-card-title-text">Case Details</h2>
+                    <dl className="td-details-list">
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{`Current status: ${formatCaseStatusLabel(ticket.statuscode)}`}</dd>
+                      </div>
+                      <div>
+                        <dt>Priority</dt>
+                        <dd>{`Priority level: ${formatCasePriorityLabel(ticket.prioritycode)}`}</dd>
+                      </div>
+                      <div>
+                        <dt>Assigned To</dt>
+                        <dd>{ticket._ownerid_value ?? 'Unassigned'}</dd>
+                      </div>
+                      <div>
+                        <dt>Created</dt>
+                        <dd>{formatDate(ticket.createdon)}</dd>
+                      </div>
+                      <div>
+                        <dt>Last Updated</dt>
+                        <dd>{formatDate(ticket.modifiedon)}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section className="td-card" aria-labelledby="attachments-heading">
+                    <h2 id="attachments-heading" className="td-card-title-text">
+                      Attachments
+                    </h2>
+                    {attachments.length === 0 ? (
+                      <p className="td-muted">No attachments.</p>
+                    ) : (
+                      <ul className="td-attachments">
+                        {attachments.map((attachment) => (
+                          <li key={attachment.annotationid}>
+                            <div>
+                              <strong>{attachment.filename}</strong>
+                              <span>{attachment.mimetype || 'Attachment'}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDownload(attachment.annotationid)}
+                              aria-label={`Download ${attachment.filename}`}
+                            >
+                              Download
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+
+                  <section className="td-card">
+                    <h2 className="td-card-title-text">Assigned Agent</h2>
+                    <div className="td-agent">
+                      <div className="td-avatar td-avatar-lg">{initialsFromName(agentName)}</div>
+                      <div>
+                        <p>{agentName}</p>
+                        <span>Support Agent</span>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }

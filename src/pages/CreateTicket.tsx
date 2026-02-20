@@ -1,14 +1,7 @@
 import { useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { Form, Formik } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { useAntiForgeryToken } from '@/hooks/useAntiForgeryToken';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +11,14 @@ import { createIncident } from '@/services/incidents';
 import { CasePriority } from '@/types';
 import type { AnnotationCreatePayload, CaseCreatePayload } from '@/types';
 import { validateFiles, type FileValidationError } from '@/utils/file-validation';
+import './create-ticket.css';
+
+const iconBack = '/assets/create-ticket/icon-back.svg';
+const iconTitle = '/assets/create-ticket/icon-title.svg';
+const iconTell = '/assets/create-ticket/icon-tell.svg';
+const iconContact = '/assets/create-ticket/icon-contact.svg';
+const iconAccount = '/assets/create-ticket/icon-account.svg';
+const iconNext = '/assets/create-ticket/icon-next.svg';
 
 const SESSION_STORAGE_KEY = 'create-ticket-form';
 
@@ -106,6 +107,10 @@ function persistForm(values: CreateTicketFormValues) {
   sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
 }
 
+function isGenericDataverseCreateError(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 400 && error.code === '9004010D';
+}
+
 export function CreateTicket() {
   const navigate = useNavigate();
   const user = useAuth();
@@ -114,13 +119,11 @@ export function CreateTicket() {
   const [fileErrors, setFileErrors] = useState<FileValidationError[]>([]);
 
   const initialValues = useMemo(() => getInitialValues(), []);
+  const fullName = user ? `${user.firstName} ${user.lastName}` : 'Portal User';
+  const accountLabel = user?.accountId ?? 'No account linked';
 
   return (
-    <Stack spacing={3}>
-      <Typography variant="h4">Create a Support Ticket</Typography>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
+    <div className="ct-page" data-node-id="1:873">
       <Formik<CreateTicketFormValues>
         initialValues={initialValues}
         validationSchema={validationSchema}
@@ -157,7 +160,21 @@ export function CreateTicket() {
           };
 
           try {
-            const incidentId = await createIncident(createPayload, csrfToken);
+            let incidentId: string;
+
+            try {
+              incidentId = await createIncident(createPayload, csrfToken);
+            } catch (error) {
+              if (!isGenericDataverseCreateError(error) || !user.contactId) {
+                throw error;
+              }
+
+              const fallbackPayload: CaseCreatePayload = {
+                ...createPayload,
+                'customerid_contact@odata.bind': `/contacts(${user.contactId})`,
+              };
+              incidentId = await createIncident(fallbackPayload, csrfToken);
+            }
 
             for (const file of values.attachments) {
               const documentbody = await fileToBase64(file);
@@ -165,7 +182,7 @@ export function CreateTicket() {
                 filename: file.name,
                 mimetype: file.type,
                 documentbody,
-                'objectid@odata.bind': `/incidents(${incidentId})`,
+                'objectid_incident@odata.bind': `/incidents(${incidentId})`,
               };
               await createAnnotation(annotationPayload, csrfToken);
             }
@@ -198,109 +215,182 @@ export function CreateTicket() {
           handleBlur,
           setFieldValue,
         }) => (
-          <Form noValidate>
-            <Stack spacing={3}>
-              <TextField
-                label="Subject"
-                name="subject"
-                value={values.subject}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.subject && Boolean(errors.subject)}
-                helperText={touched.subject ? errors.subject : ''}
-                inputProps={{ maxLength: 300 }}
-                fullWidth
-              />
+          <Form noValidate className="ct-form-root">
+            <div className="ct-top-row">
+              <Link className="ct-back-link" to="/tickets" aria-label="Back to My Tickets">
+                <img src={iconBack} alt="" />
+                <span>Back to My Tickets</span>
+              </Link>
+            </div>
 
-              <TextField
-                select
-                SelectProps={{ native: true }}
-                label="Category"
-                name="casetypecode"
-                value={values.casetypecode}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.casetypecode && Boolean(errors.casetypecode)}
-                helperText={touched.casetypecode ? errors.casetypecode : ''}
-                fullWidth
-              >
-                <option value="">Select a category</option>
-                {CASE_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </TextField>
+            <div className="ct-title-row">
+              <div className="ct-title-icon-wrap">
+                <img src={iconTitle} alt="" />
+              </div>
+              <div>
+                <h1>Create New Ticket</h1>
+                <p>Submit a new service request to our support team</p>
+              </div>
+            </div>
 
-              <TextField
-                label="Description"
-                name="description"
-                value={values.description}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.description && Boolean(errors.description)}
-                helperText={touched.description ? errors.description : ''}
-                multiline
-                minRows={5}
-                inputProps={{ maxLength: 4000 }}
-                fullWidth
-              />
+            <section className="ct-card">
+              <div className="ct-card-intro">
+                <div className="ct-card-intro-title">
+                  <img src={iconTell} alt="" />
+                  <span>Tell us about your issue</span>
+                </div>
+                <p>
+                  Provide a clear subject and detailed description to help us resolve your issue faster.
+                </p>
+              </div>
 
-              <TextField
-                select
-                SelectProps={{ native: true }}
-                label="Priority (optional)"
-                name="prioritycode"
-                value={values.prioritycode}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                fullWidth
-              >
-                <option value="">No preference</option>
-                <option value={String(CasePriority.High)}>High</option>
-                <option value={String(CasePriority.Normal)}>Normal</option>
-                <option value={String(CasePriority.Low)}>Low</option>
-              </TextField>
+              {submitError && <ErrorBanner message={submitError} />}
 
-              <Box component="section">
-                <Typography variant="subtitle2" component="label" htmlFor="attachments-input" display="block" mb={1}>
-                  <span id="attachments-heading">Attachments</span>
-                </Typography>
-                <Typography variant="body2" color="text.secondary" mb={1}>
-                  Up to 3 files, 10 MB maximum each.
-                </Typography>
-                <input
-                  id="attachments-input"
-                  aria-label="Attachments"
-                  type="file"
-                  multiple
-                  onChange={(event) => {
-                    const files = Array.from(event.currentTarget.files ?? []);
-                    setFieldValue('attachments', files);
-                    setFileErrors(validateFiles(files));
-                  }}
-                />
-                <Box aria-live="polite">
-                  {fileErrors.map((error, index) => (
-                    <Typography key={`${error.code}-${error.fileName ?? ''}-${index}`} color="error" variant="body2">
-                      {error.code === 'TOO_MANY_FILES' ? 'You can upload a maximum of 3 files.' : error.message}
-                    </Typography>
-                  ))}
-                </Box>
-              </Box>
+              <div className="ct-fields">
+                <div className="ct-field">
+                  <label htmlFor="subject">
+                    Subject <span className="ct-required">*</span>
+                  </label>
+                  <input
+                    id="subject"
+                    name="subject"
+                    type="text"
+                    value={values.subject}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    maxLength={300}
+                    placeholder="Brief summary of your issue..."
+                    aria-invalid={touched.subject && Boolean(errors.subject)}
+                  />
+                  {touched.subject && errors.subject && <p className="ct-error">{errors.subject}</p>}
+                </div>
 
-              <Box display="flex" gap={2}>
-                <Button type="submit" variant="contained" disabled={isSubmitting} aria-label="Submit ticket">
-                  Submit Ticket
-                </Button>
-                <Button type="button" variant="outlined" onClick={() => navigate('/')} aria-label="Cancel ticket creation">
+                <div className="ct-field">
+                  <label htmlFor="description">
+                    Description <span className="ct-required">*</span>
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={values.description}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    maxLength={4000}
+                    placeholder="Describe your issue in detail. Include steps to reproduce, expected behavior, and any error messages..."
+                    aria-invalid={touched.description && Boolean(errors.description)}
+                  />
+                  <p className="ct-hint">{values.description.length} characters</p>
+                  {touched.description && errors.description && (
+                    <p className="ct-error">{errors.description}</p>
+                  )}
+                </div>
+
+                <div className="ct-classification-grid">
+                  <div className="ct-field">
+                    <label htmlFor="casetypecode">
+                      Category <span className="ct-required">*</span>
+                    </label>
+                    <select
+                      id="casetypecode"
+                      name="casetypecode"
+                      value={values.casetypecode}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      aria-invalid={touched.casetypecode && Boolean(errors.casetypecode)}
+                    >
+                      <option value="">Select a category</option>
+                      {CASE_TYPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {touched.casetypecode && errors.casetypecode && (
+                      <p className="ct-error">{errors.casetypecode}</p>
+                    )}
+                  </div>
+
+                  <div className="ct-field">
+                    <label htmlFor="prioritycode">Priority (optional)</label>
+                    <select
+                      id="prioritycode"
+                      name="prioritycode"
+                      value={values.prioritycode}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    >
+                      <option value="">No preference</option>
+                      <option value={String(CasePriority.High)}>High</option>
+                      <option value={String(CasePriority.Normal)}>Normal</option>
+                      <option value={String(CasePriority.Low)}>Low</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="ct-field">
+                  <label htmlFor="attachments-input">Attachments</label>
+                  <p className="ct-hint">Up to 3 files, 10 MB maximum each.</p>
+                  <input
+                    id="attachments-input"
+                    aria-label="Attachments"
+                    type="file"
+                    multiple
+                    onChange={(event) => {
+                      const files = Array.from(event.currentTarget.files ?? []);
+                      setFieldValue('attachments', files);
+                      setFileErrors(validateFiles(files));
+                    }}
+                  />
+                  <div aria-live="polite">
+                    {fileErrors.map((error, index) => (
+                      <p key={`${error.code}-${error.fileName ?? ''}-${index}`} className="ct-error">
+                        {error.code === 'TOO_MANY_FILES'
+                          ? 'You can upload a maximum of 3 files.'
+                          : error.message}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="ct-contact-split">
+                  <p>Contact Information (auto-filled)</p>
+                  <div className="ct-contact-grid">
+                    <div className="ct-contact-tile">
+                      <img src={iconContact} alt="" />
+                      <div>
+                        <span>Contact</span>
+                        <strong>{fullName}</strong>
+                      </div>
+                    </div>
+                    <div className="ct-contact-tile">
+                      <img src={iconAccount} alt="" />
+                      <div>
+                        <span>Account</span>
+                        <strong>{accountLabel}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ct-actions">
+                <button
+                  type="button"
+                  className="ct-cancel"
+                  onClick={() => navigate('/tickets')}
+                  aria-label="Cancel ticket creation"
+                >
                   Cancel
-                </Button>
-              </Box>
-            </Stack>
+                </button>
+                <button type="submit" className="ct-next" disabled={isSubmitting} aria-label="Submit ticket">
+                  <span>Submit Ticket</span>
+                  <img src={iconNext} alt="" />
+                </button>
+              </div>
+            </section>
           </Form>
         )}
       </Formik>
-    </Stack>
+    </div>
   );
 }

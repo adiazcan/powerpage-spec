@@ -7,8 +7,8 @@ import {
 } from 'react-router-dom';
 import { AuthGuard } from '@/components/AuthGuard';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { Layout } from '@/components/Layout';
 import { ApiError } from '@/services/api-client';
+import { Home } from '@/pages/Home';
 import { TicketList } from '@/pages/TicketList';
 import { TicketDetail } from '@/pages/TicketDetail';
 import { CreateTicket } from '@/pages/CreateTicket';
@@ -87,18 +87,48 @@ const router = createBrowserRouter([
     path: '/',
     element: (
       <AuthGuard>
-        <Layout />
+        <Home />
       </AuthGuard>
     ),
     errorElement: <RouteErrorBoundary />,
-    children: [
-      { index: true, element: <TicketList /> },
-      { path: 'tickets/new', element: <CreateTicket /> },
-      { path: 'tickets/:id/confirm', element: <Confirmation /> },
-      { path: 'tickets/:id', element: <TicketDetail /> },
-      { path: '*', element: <NotFoundPage /> },
-    ],
   },
+  {
+    path: '/tickets',
+    element: (
+      <AuthGuard>
+        <TicketList />
+      </AuthGuard>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/tickets/:id/confirm',
+    element: (
+      <AuthGuard>
+        <Confirmation />
+      </AuthGuard>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/tickets/:id',
+    element: (
+      <AuthGuard>
+        <TicketDetail />
+      </AuthGuard>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: '/tickets/new',
+    element: (
+      <AuthGuard>
+        <CreateTicket />
+      </AuthGuard>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  { path: '*', element: <NotFoundPage /> },
 ]);
 
 export function App() {

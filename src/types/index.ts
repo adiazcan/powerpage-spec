@@ -42,6 +42,7 @@ export interface CaseCreatePayload {
   description: string;
   casetypecode: number;
   prioritycode?: CasePriority;
+  'customerid_contact@odata.bind'?: string;
 }
 
 // ── Activity (Timeline Entry) ────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export interface AnnotationCreatePayload {
   filename: string;
   mimetype: string;
   documentbody: string; // base64
-  'objectid@odata.bind': string; // "/incidents(<incidentid>)"
+  'objectid_incident@odata.bind': string; // "/incidents(<incidentid>)"
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────

@@ -102,6 +102,15 @@ describe('CreateTicket', () => {
         vi.mocked(createAnnotation).mock.invocationCallOrder[0]
       );
     });
+
+    expect(createAnnotation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: 'notes.txt',
+        mimetype: 'text/plain',
+        'objectid_incident@odata.bind': '/incidents(inc-123)',
+      }),
+      'csrf-token'
+    );
   });
 
   it('on 401 saves form in sessionStorage and redirects to login', async () => {
@@ -145,4 +154,35 @@ describe('CreateTicket', () => {
     expect(subject).toHaveValue('Cannot reset password');
     expect(description).toHaveValue('Reset flow fails');
   });
+
+  it('retries incident creation with explicit contact bind on 9004010D', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createIncident)
+      .mockReset()
+      .mockRejectedValueOnce(new ApiError(400, 'Common Data Service error occurred.', '9004010D'))
+      .mockResolvedValueOnce('inc-456');
+
+    renderCreateTicket();
+
+    await user.type(screen.getByLabelText(/subject/i), 'Cannot create ticket');
+    await user.selectOptions(screen.getByLabelText(/category/i), '2');
+    await user.type(screen.getByLabelText(/description/i), 'Dataverse returned a bad request');
+
+    await user.click(screen.getByRole('button', { name: /submit ticket/i }));
+
+    await waitFor(() => {
+      expect(createIncident).toHaveBeenCalledTimes(2);
+    });
+
+    expect(vi.mocked(createIncident).mock.calls[0]?.[0]).toMatchObject({
+      title: 'Cannot create ticket',
+      casetypecode: 2,
+    });
+
+    expect(vi.mocked(createIncident).mock.calls[1]?.[0]).toMatchObject({
+      title: 'Cannot create ticket',
+      casetypecode: 2,
+      'customerid_contact@odata.bind': '/contacts(contact-123)',
+    });
+  }, 15_000);
 });

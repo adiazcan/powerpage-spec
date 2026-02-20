@@ -311,6 +311,8 @@ coverage/
 .env*
 .DS_Store
 Thumbs.db
+.idea/
+*.swp
 
 # Playwright
 playwright-report/

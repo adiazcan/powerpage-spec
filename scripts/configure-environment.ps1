@@ -87,6 +87,55 @@ function Write-Setting {
     Write-Host "   $Name = $truncated" -ForegroundColor Gray
 }
 
+function Get-ErrorDetails {
+    param([object]$ErrorRecord)
+
+    $parts = @()
+    if ($ErrorRecord -and $ErrorRecord.Exception -and $ErrorRecord.Exception.Message) {
+        $parts += $ErrorRecord.Exception.Message
+    }
+    if ($ErrorRecord -and $ErrorRecord.ErrorDetails -and $ErrorRecord.ErrorDetails.Message) {
+        $parts += $ErrorRecord.ErrorDetails.Message
+    }
+
+    $response = $null
+    if ($ErrorRecord -and $ErrorRecord.Exception -and $ErrorRecord.Exception.PSObject.Properties['Response']) {
+        $response = $ErrorRecord.Exception.Response
+    }
+
+    if ($response) {
+        # PowerShell 7 / HttpResponseMessage
+        try {
+            if ($response.PSObject.Properties['Content'] -and $response.Content) {
+                $raw = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                if ($raw -and $raw.Trim().Length -gt 0) {
+                    $parts += $raw
+                }
+            }
+        }
+        catch { }
+
+        # Windows PowerShell / HttpWebResponse
+        try {
+            if ($response.PSObject.Methods['GetResponseStream']) {
+                $stream = $response.GetResponseStream()
+                if ($stream) {
+                    $reader = New-Object System.IO.StreamReader($stream)
+                    $raw = $reader.ReadToEnd()
+                    $reader.Dispose()
+                    $stream.Dispose()
+                    if ($raw -and $raw.Trim().Length -gt 0) {
+                        $parts += $raw
+                    }
+                }
+            }
+        }
+        catch { }
+    }
+
+    return ($parts | Where-Object { $_ -and $_.Trim().Length -gt 0 } | Select-Object -Unique) -join ' | '
+}
+
 function Test-PacCli {
     $cmd = Get-Command pac -ErrorAction SilentlyContinue
     if (-not $cmd) {
@@ -400,6 +449,8 @@ function Set-SiteSetting {
 
     Write-Setting -Name $Name -Value $Value
 
+    $succeeded = $false
+
     $table    = $DM.SiteSettingTable
     $idCol    = $DM.SiteSettingId
     $nameCol  = $DM.SiteSettingName
@@ -423,13 +474,13 @@ function Set-SiteSetting {
         try {
             Invoke-RestMethod -Uri "$ApiBase/${table}(${id})" -Headers $headers -Method Patch -Body $body | Out-Null
             Write-Host "   [UPDATED]" -ForegroundColor Green
+            $succeeded = $true
         }
         catch {
-            # Enhanced data model (mspp_) PATCH may fail with 0x80040224.
-            # Workaround: delete the existing record and create a new one.
-            $errMsg = $_.Exception.Message
-            if ($errMsg -match '0x80040224|key was not present') {
-                Write-Host "   PATCH failed on enhanced model — recreating setting..." -ForegroundColor Yellow
+            # Enhanced data model (mspp_) PATCH is unreliable; fallback to recreate.
+            $errMsg = Get-ErrorDetails -ErrorRecord $_
+            if ($DM.Prefix -eq 'mspp_' -or $errMsg -match '0x80040224|key was not present') {
+                Write-Host "   PATCH failed ($errMsg) — recreating setting..." -ForegroundColor Yellow
                 try {
                     $delHeaders = @{
                         'Authorization'    = "Bearer $Token"
@@ -444,25 +495,44 @@ function Set-SiteSetting {
                     }
                     Invoke-DataversePost -ApiBase $ApiBase -Token $Token -Path $table -Body $newBody | Out-Null
                     Write-Host "   [RECREATED]" -ForegroundColor Green
+                    $succeeded = $true
                 }
                 catch {
+                    $detail = Get-ErrorDetails -ErrorRecord $_
                     Write-Host "   [FAILED] Could not update setting. Update manually via Design Studio or D365 UI." -ForegroundColor Red
-                    Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-Host "   Error: $detail" -ForegroundColor Red
+                    $succeeded = $false
                 }
             }
             else {
                 Write-Host "   [FAILED] $errMsg" -ForegroundColor Red
+                $succeeded = $false
             }
         }
     }
     else {
-        $body = @{
-            $nameCol  = $Name
-            $valueCol = $Value
-            "$($DM.SiteSettingWebsite)@odata.bind" = "/$($DM.WebsiteEntitySet)($WebsiteId)"
+        try {
+            $body = @{
+                $nameCol  = $Name
+                $valueCol = $Value
+                "$($DM.SiteSettingWebsite)@odata.bind" = "/$($DM.WebsiteEntitySet)($WebsiteId)"
+            }
+            Invoke-DataversePost -ApiBase $ApiBase -Token $Token -Path $table -Body $body | Out-Null
+            Write-Host "   [CREATED]" -ForegroundColor Green
+            $succeeded = $true
         }
-        Invoke-DataversePost -ApiBase $ApiBase -Token $Token -Path $table -Body $body | Out-Null
-        Write-Host "   [CREATED]" -ForegroundColor Green
+        catch {
+            $detail = Get-ErrorDetails -ErrorRecord $_
+            Write-Host "   [FAILED] $detail" -ForegroundColor Red
+            $succeeded = $false
+        }
+    }
+
+    if ($succeeded) {
+        $script:SettingAppliedCount++
+    }
+    else {
+        $script:SettingFailedCount++
     }
 }
 
@@ -482,9 +552,10 @@ function Get-AuthenticatedUsersWebRole {
     $nameCol = $DM.WebRoleName
     $idCol = $DM.WebRoleId
 
-    # Query for "Authenticated Users" web role for this website
-    $filter = "$nameCol eq 'Authenticated Users'"
-    $select = "$idCol,$nameCol"
+    # Scope to both role name and website to avoid selecting a role from another site.
+    $websiteFilter = "_$($DM.WebRoleWebsite)_value eq $WebsiteId"
+    $filter = "$nameCol eq 'Authenticated Users' and $websiteFilter"
+    $select = "$idCol,$nameCol,_$($DM.WebRoleWebsite)_value"
     $path = "${table}?`$filter=${filter}&`$select=${select}"
 
     $result = Invoke-DataverseGet -ApiBase $ApiBase -Token $Token -Path $path
@@ -505,7 +576,8 @@ function Get-AuthenticatedUsersWebRole {
     }
     $role = $result.value[0]
     $roleId = $role.$idCol
-    Write-Host "   Found 'Authenticated Users' web role: $roleId" -ForegroundColor Green
+    $roleWebsiteId = $role."_$($DM.WebRoleWebsite)_value"
+    Write-Host "   Found 'Authenticated Users' web role: $roleId (website: $roleWebsiteId)" -ForegroundColor Green
     return $roleId
 }
 
@@ -767,6 +839,8 @@ if (-not $token -or -not $DM) {
 # --- Initialize tracking variables ---
 $script:DuplicateSettings = @{}
 $script:ManualWebRoleNeeded = $false
+$script:SettingAppliedCount = 0
+$script:SettingFailedCount = 0
 
 # --- Fetch existing settings for upsert logic ---
 $existing = Get-ExistingSiteSettings -ApiBase $apiBase -Token $token -DM $DM -WebsiteId $WebsiteId
@@ -927,7 +1001,10 @@ if ($DryRun) {
     Write-Host "    $permCount table permissions would be created." -ForegroundColor Yellow
 }
 else {
-    Write-Host "  Done! $settingCount site settings applied." -ForegroundColor Green
+    Write-Host "  Done! $($script:SettingAppliedCount)/$settingCount site settings applied." -ForegroundColor Green
+    if ($script:SettingFailedCount -gt 0) {
+        Write-Host "  WARNING: $($script:SettingFailedCount) site settings failed to apply." -ForegroundColor Yellow
+    }
     if ($token) {
         Write-Host "  $permCount table permissions configured." -ForegroundColor Green
     }

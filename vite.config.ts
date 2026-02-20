@@ -13,6 +13,25 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined;
+          }
+
+          if (id.includes('node_modules/@mui') || id.includes('node_modules/@emotion')) {
+            return 'mui-vendor';
+          }
+
+          if (id.includes('node_modules/formik') || id.includes('node_modules/yup')) {
+            return 'forms-vendor';
+          }
+
+          if (id.includes('node_modules/dayjs')) {
+            return 'date-vendor';
+          }
+
+          return 'vendor';
+        },
         // Power Pages code-site serves web files at root, not under /assets/
         entryFileNames: '[name]-[hash].js',
         chunkFileNames: '[name]-[hash].js',
